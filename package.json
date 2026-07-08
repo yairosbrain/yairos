@@ -1,0 +1,31 @@
+{
+  "name": "yairos",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Y.A.I.R.O.S — Your Artificial Intelligence Realtime Operating System",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "preview": "vite preview",
+    "icons": "node scripts/gen-icons.mjs",
+    "convex": "convex dev"
+  },
+  "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.6.1",
+    "convex": "^1.42.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/three": "^0.185.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "^7.0.2",
+    "vite": "^6.4.3",
+    "vite-plugin-pwa": "^1.3.0"
+  }
+}
