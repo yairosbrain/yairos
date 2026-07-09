@@ -12,14 +12,21 @@ const defaults: DeviceSettings = {
   claudeKey: "",
   githubToken: "",
   githubOwner: "yairosbrain",
-  puterModel: "claude-sonnet-4"
+  puterModel: "claude-sonnet-5"
 };
+
+// Old defaults that upstream providers have since retired → auto-upgrade
+const RETIRED_PUTER_MODELS = ["claude-sonnet-4", "claude-sonnet-4-5"];
 
 export function getSettings(): DeviceSettings {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return { ...defaults };
-    return { ...defaults, ...(JSON.parse(raw) as Partial<DeviceSettings>) };
+    const s = { ...defaults, ...(JSON.parse(raw) as Partial<DeviceSettings>) };
+    if (RETIRED_PUTER_MODELS.includes(s.puterModel)) {
+      s.puterModel = defaults.puterModel;
+    }
+    return s;
   } catch {
     return { ...defaults };
   }

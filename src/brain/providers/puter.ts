@@ -78,11 +78,26 @@ export async function askPuter(messages: BrainMessage[]): Promise<string> {
     await window.puter.auth.signIn();
   }
 
-  const model = getSettings().puterModel || "claude-sonnet-4";
-  const result = await window.puter.ai.chat(
-    messages.map((m) => ({ role: m.role, content: m.content })),
-    { model }
-  );
+  const FALLBACK = "claude-sonnet-5";
+  const model = getSettings().puterModel || FALLBACK;
+  const chat = (m: string) =>
+    window.puter!.ai.chat(
+      messages.map((msg) => ({ role: msg.role, content: msg.content })),
+      { model: m }
+    );
+
+  let result: unknown;
+  try {
+    result = await chat(model);
+  } catch (e) {
+    // Model was retired upstream — retry once with the current fallback
+    const msg = JSON.stringify(e ?? "");
+    if (model !== FALLBACK && /not_found|not found|invalid model|404/i.test(msg)) {
+      result = await chat(FALLBACK);
+    } else {
+      throw e;
+    }
+  }
   const text = extractText(result);
   if (!text) throw new Error("Puter returned an empty response");
   return text;
