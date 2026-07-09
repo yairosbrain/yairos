@@ -387,6 +387,21 @@ button {
   cursor: not-allowed;
 }
 
+.mic-cancel {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 1px solid var(--error);
+  background: rgba(60, 12, 20, 0.55);
+  color: var(--error);
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  animation: msgin 0.15s ease-out;
+}
+
 .ask-input {
   flex: 1;
   min-width: 0;

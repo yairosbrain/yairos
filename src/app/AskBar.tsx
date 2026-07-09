@@ -39,6 +39,17 @@ export default function AskBar() {
 
   const stopMic = () => pttRef.current?.stop();
 
+  const cancelMic = () => {
+    pttRef.current?.cancel();
+    setText("");
+  };
+
+  // Tap toggles the mic on/off (mobile-friendly); Space is still hold-to-talk
+  const toggleMic = () => {
+    if (listening) stopMic();
+    else startMic();
+  };
+
   // Hold Space to talk on desktop (only when not typing in a field)
   useEffect(() => {
     if (!supported) return;
@@ -76,23 +87,41 @@ export default function AskBar() {
       <button
         type="button"
         className={`mic ${listening ? "listening" : ""} ${!supported ? "disabled" : ""}`}
-        title={supported ? t("ask.holdMic") : t("mic.unsupported")}
-        onPointerDown={(e) => {
-          e.preventDefault();
-          startMic();
-        }}
-        onPointerUp={stopMic}
-        onPointerLeave={stopMic}
+        title={
+          !supported
+            ? t("mic.unsupported")
+            : listening
+              ? t("ask.stopMic")
+              : t("ask.holdMic")
+        }
+        onClick={toggleMic}
         onContextMenu={(e) => e.preventDefault()}
         disabled={!supported}
-        aria-label={t("ask.holdMic")}
+        aria-label={listening ? t("ask.stopMic") : t("ask.holdMic")}
       >
-        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden>
-          <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Z" />
-          <path d="M5 11a7 7 0 0 0 14 0h-2a5 5 0 0 1-10 0H5Z" />
-          <path d="M11 18h2v3h-2z" />
-        </svg>
+        {listening ? (
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden>
+            <rect x="6" y="6" width="12" height="12" rx="2" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden>
+            <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 1 0-6 0v5a3 3 0 0 0 3 3Z" />
+            <path d="M5 11a7 7 0 0 0 14 0h-2a5 5 0 0 1-10 0H5Z" />
+            <path d="M11 18h2v3h-2z" />
+          </svg>
+        )}
       </button>
+      {listening && (
+        <button
+          type="button"
+          className="mic-cancel"
+          onClick={cancelMic}
+          title={t("ask.cancelMic")}
+          aria-label={t("ask.cancelMic")}
+        >
+          ✕
+        </button>
+      )}
       <input
         className="ask-input"
         value={listening ? text || t("ask.listening") : text}
