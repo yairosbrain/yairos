@@ -9,3 +9,5 @@ dev-dist
 convex/_generated
 *.log
 .DS_Store
+
+.vercel
