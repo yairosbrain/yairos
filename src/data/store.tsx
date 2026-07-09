@@ -36,10 +36,12 @@ export function useData() {
   return useContext(Ctx);
 }
 
-const convexUrl: string | undefined = import.meta.env.VITE_CONVEX_URL as
-  | string
-  | undefined;
-const convexClient = convexUrl ? new ConvexReactClient(convexUrl) : null;
+// Strip BOM/whitespace that can sneak in when the env var is set via a shell
+const rawConvexUrl = (import.meta.env.VITE_CONVEX_URL as string | undefined) ?? "";
+const convexUrl = rawConvexUrl.replace(new RegExp("\\uFEFF", "g"), "").trim();
+const convexClient = convexUrl.startsWith("http")
+  ? new ConvexReactClient(convexUrl)
+  : null;
 
 export function DataProvider({ children }: { children: ReactNode }) {
   if (convexClient) {
