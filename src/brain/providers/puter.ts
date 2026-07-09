@@ -14,6 +14,10 @@ declare global {
           options?: { model?: string; stream?: boolean }
         ) => Promise<unknown>;
       };
+      auth?: {
+        isSignedIn: () => boolean;
+        signIn: () => Promise<unknown>;
+      };
     };
   }
 }
@@ -67,6 +71,13 @@ function extractText(result: unknown): string {
 export async function askPuter(messages: BrainMessage[]): Promise<string> {
   await ensurePuter();
   if (!window.puter) throw new Error("Puter.js unavailable");
+
+  // First use on a device: open the Puter sign-in popup (yairosbrain account).
+  // Must happen before the chat call, otherwise Puter rejects with an object error.
+  if (window.puter.auth && !window.puter.auth.isSignedIn()) {
+    await window.puter.auth.signIn();
+  }
+
   const model = getSettings().puterModel || "claude-sonnet-4";
   const result = await window.puter.ai.chat(
     messages.map((m) => ({ role: m.role, content: m.content })),

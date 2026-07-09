@@ -17,6 +17,31 @@ export class BrainError extends Error {
   }
 }
 
+/** Providers (especially Puter) reject with plain objects — dig out a readable message */
+export function errMessage(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === "string") return e;
+  if (e && typeof e === "object") {
+    const r = e as Record<string, unknown>;
+    const nested = r.error as Record<string, unknown> | string | undefined;
+    const candidate =
+      (typeof r.message === "string" && r.message) ||
+      (typeof nested === "string" && nested) ||
+      (nested &&
+        typeof nested === "object" &&
+        ((typeof nested.message === "string" && nested.message) ||
+          (typeof nested.delegate === "string" && nested.delegate) ||
+          (typeof nested.code === "string" && nested.code)));
+    if (candidate) return candidate;
+    try {
+      return JSON.stringify(e).slice(0, 300);
+    } catch {
+      return String(e);
+    }
+  }
+  return String(e);
+}
+
 const providers: Record<
   BrainProviderId,
   (messages: BrainMessage[]) => Promise<string>
@@ -36,7 +61,7 @@ export async function askBrain(messages: BrainMessage[]): Promise<string> {
     }
     return answer.trim();
   } catch (e) {
-    throw new BrainError(provider, e instanceof Error ? e.message : String(e));
+    throw new BrainError(provider, errMessage(e));
   }
 }
 
