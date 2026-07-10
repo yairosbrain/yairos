@@ -32,6 +32,7 @@ export default defineConfig({
         ]
       },
       workbox: {
+        importScripts: ["sw-notify.js"],
         globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
         navigateFallback: "/index.html"

@@ -84,5 +84,8 @@
   "run.updating": "Updating {name}…",
   "run.updated": "The update is live, sir.",
   "run.whichProject": "I couldn't find a matching live project. Which project do you mean?",
-  "run.canceled": "Project canceled, sir."
+  "run.canceled": "Project canceled, sir.",
+  "notify.working": "Yairos is working…",
+  "notify.done": "Yairos finished ✓",
+  "notify.error": "Yairos hit an error"
 }

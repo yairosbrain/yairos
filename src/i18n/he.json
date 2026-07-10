@@ -84,5 +84,8 @@
   "run.updating": "מעדכן את {name}…",
   "run.updated": "העדכון באוויר, אדוני.",
   "run.whichProject": "לא מצאתי פרויקט חי שמתאים. על איזה פרויקט מדובר?",
-  "run.canceled": "הפרויקט בוטל, אדוני."
+  "run.canceled": "הפרויקט בוטל, אדוני.",
+  "notify.working": "יאירוס עובד…",
+  "notify.done": "יאירוס סיים ✓",
+  "notify.error": "יאירוס נתקל בשגיאה"
 }

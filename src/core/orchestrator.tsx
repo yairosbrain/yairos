@@ -29,6 +29,8 @@ import {
   parseRepoUrl,
   updateRepoFiles
 } from "../deploy/github";
+import { ensureNotifyPermission, notifyDone, notifyStage } from "../notify/notifications";
+import { startBuildWakeLock, stopBuildWakeLock } from "../notify/wakeLock";
 import type { AgentId, AgentRun, ChatMessage, Lang, Project, SiteFile } from "../types";
 
 interface OrchestratorApi {
@@ -105,6 +107,8 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
       lang: langRef.current,
       projectId
     });
+    // Mirror the stage to the lock-screen / shade notification (no-op without permission)
+    notifyStage(tRef.current("notify.working"), text);
   }, []);
 
   /** Run one department: records the agentRun (lights the star) and returns the result */
@@ -142,6 +146,7 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
           : e instanceof Error
             ? e.message
             : String(e);
+      notifyDone(tRef.current("notify.error"), msg);
       await say(msg, { projectId, kind: "error" });
     },
     [say]
@@ -241,14 +246,18 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
         await askQuestion(project, project.questions, answers.length);
         return;
       }
+      void ensureNotifyPermission();
+      startBuildWakeLock();
       setBusy(true);
       try {
         await dataRef.current.updateProject(project.id, { status: "spec" });
         await runSpecPhase(project, answers);
+        notifyDone(tRef.current("notify.done"), tRef.current("run.specReady"));
       } catch (e) {
         await dataRef.current.updateProject(project.id, { status: "interrogating" });
         await reportError(e, project.id);
       } finally {
+        stopBuildWakeLock();
         setActiveAgent(null);
         setBusy(false);
       }
@@ -319,6 +328,10 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // Ask while we're still inside the user's click/message gesture,
+      // so the build keeps reporting to the lock screen when he leaves
+      void ensureNotifyPermission();
+      startBuildWakeLock();
       setBusy(true);
       try {
         await dataRef.current.updateProject(project.id, {
@@ -351,6 +364,7 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
             projectId: project.id,
             kind: "package"
           });
+          notifyDone(tRef.current("notify.done"), tRef.current("run.packageReady"));
           await say(tRef.current("run.packageReady"), { projectId: project.id });
           return;
         }
@@ -389,11 +403,13 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
           projectId: project.id,
           kind: "link"
         });
+        notifyDone(tRef.current("notify.done"), tRef.current("run.live"), result.liveUrl);
         await say(tRef.current("run.live"), { projectId: project.id });
       } catch (e) {
         await dataRef.current.updateProject(project.id, { status: "awaiting_choice" });
         await reportError(e, project.id);
       } finally {
+        stopBuildWakeLock();
         setActiveAgent(null);
         setBusy(false);
       }
@@ -413,6 +429,8 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
         await say(tRef.current("run.whichProject"));
         return;
       }
+      void ensureNotifyPermission();
+      startBuildWakeLock();
       setBusy(true);
       try {
         await say(tRef.current("run.updating", { name: project.name }), {
@@ -452,11 +470,13 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
           () => "updated"
         );
         await dataRef.current.updateProject(project.id, { status: "live" });
+        notifyDone(tRef.current("notify.done"), tRef.current("run.updated"), project.liveUrl);
         await say(tRef.current("run.updated"), { projectId: project.id });
       } catch (e) {
         await dataRef.current.updateProject(project.id, { status: "live" });
         await reportError(e, project.id);
       } finally {
+        stopBuildWakeLock();
         setActiveAgent(null);
         setBusy(false);
       }
