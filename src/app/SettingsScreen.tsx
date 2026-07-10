@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { getSettings, patchSettings } from "../data/localSettings";
 import { useI18n } from "../i18n";
 import { useData } from "../data/store";
 import { askBrain } from "../brain";
+import { downloadLogo, logoDataUrl } from "./logo";
 import type { BrainProviderId, DeviceSettings } from "../types";
 
 export default function SettingsScreen() {
@@ -10,6 +11,7 @@ export default function SettingsScreen() {
   const data = useData();
   const [s, setS] = useState<DeviceSettings>(getSettings());
   const [testState, setTestState] = useState<"idle" | "testing" | "ok" | string>("idle");
+  const logoPreview = useMemo(() => logoDataUrl(512), []);
 
   const update = (patch: Partial<DeviceSettings>) => {
     setS(patchSettings(patch));
@@ -147,6 +149,15 @@ export default function SettingsScreen() {
             dir="ltr"
           />
         </div>
+      </section>
+
+      <section>
+        <label className="field-label">{t("settings.logo")}</label>
+        <img className="logo-preview" src={logoPreview} alt="Y.A.I.R.O.S" />
+        <button className="test-btn" onClick={() => downloadLogo(1024)}>
+          {t("settings.logoDownload")}
+        </button>
+        <p className="help">{t("settings.logo.help")}</p>
       </section>
 
       <section>

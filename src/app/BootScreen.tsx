@@ -26,7 +26,7 @@ export default function BootScreen({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="boot" dir="ltr">
-      <h1 className="boot-title">Y . A . I . R . O . S .</h1>
+      <h1 className="boot-title">Y.A.I.R.O.S</h1>
       <div className="boot-lines">
         {BOOT_LINES.slice(0, visible).map((l) => (
           <div key={l} className="boot-line">
