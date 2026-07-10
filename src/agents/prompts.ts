@@ -52,20 +52,32 @@ export function designerPrompt(lang: Lang): string {
   );
 }
 
-export function connectorPrompt(): string {
+export function connectorKeywordsPrompt(): string {
+  return (
+    `You are the CONNECTOR department of Y.A.I.R.O.S. You will search the global public-API directory for data sources matching a website specification.\n` +
+    `Given the spec, produce 8-12 short English search keywords covering the site's data topics, with synonyms (e.g. for a car site: car, cars, vehicle, automotive, transport, license, plate, vin).\n` +
+    `Return JSON only: {"keywords": ["k1", "k2", ...]}`
+  );
+}
+
+export function connectorPrompt(candidates: string): string {
   return (
     `You are the CONNECTOR department of Y.A.I.R.O.S. Given a website specification, find REAL public APIs that can power it with LIVE data, and write precise integration instructions for the CODER department.\n` +
     `Hard constraints — the site is a static browser-only site on GitHub Pages:\n` +
     `- Only APIs callable with fetch() directly from the browser: free, NO API key, CORS-enabled.\n` +
-    `Known-good sources (use when they fit):\n` +
-    `- Israeli government open data (data.gov.il, CKAN datastore): GET https://data.gov.il/api/3/action/datastore_search?resource_id=<ID>&filters=<url-encoded JSON> — CORS-open, no key.\n` +
+    (candidates
+      ? `\nLIVE SEARCH RESULTS from the global public-API directory (GitHub public-apis project) matching this project's topics — all listed as keyless + CORS-enabled. Pick from these when relevant, but only ones whose endpoints you actually know or whose usage is obvious; prefer famous, reliable services:\n${candidates}\n`
+      : "") +
+    `\nKnown-good sources you can always rely on (verified):\n` +
+    `- GitHub REST API: https://api.github.com — public data without a key, CORS *, ~60 req/hour/IP. Repos, users, orgs, releases, and /search/repositories?q=... Great for portfolio/dev sites.\n` +
+    `- Israeli government open data (data.gov.il, CKAN datastore): GET https://data.gov.il/api/3/action/datastore_search?resource_id=<ID>&filters=<url-encoded JSON> — CORS-open, no key, hundreds of datasets (vehicles, budgets, health, education...).\n` +
     `  * Israeli vehicle registry by plate number (VERIFIED WORKING, ~4.15M records): resource_id=053cea08-09bc-40ec-8f7a-156f0677aff3, filter {"mispar_rechev": <plate digits as number>}. Response record fields: tozeret_nm (manufacturer, Hebrew), kinuy_mishari (commercial model name), degem_nm (model code), shnat_yitzur (year), tzeva_rechev (color), sug_delek_nm (fuel), baalut (ownership type: פרטי/ליסינג/השכרה…), tokef_dt (annual test valid until), mivchan_acharon_dt (last test date), moed_aliya_lakvish (first on road, "YYYY-M"), degem_manoa (engine model), misgeret (VIN/chassis), zmig_kidmi/zmig_ahori (tires), kvutzat_zihum (pollution group), mispar_rechev (plate). result.records is empty = plate not found (motorcycles/heavy vehicles live in other resources).\n` +
     `  * Other data.gov.il resources may be used ONLY if you are certain of the resource_id.\n` +
-    `- Weather: api.open-meteo.com (no key). Countries: restcountries.com. Currency rates: api.frankfurter.app. Geocoding: nominatim.openstreetmap.org (&format=json). Wikipedia: he.wikipedia.org/api/rest_v1/page/summary/<title>.\n` +
+    `- Weather/forecast: api.open-meteo.com (no key). Countries: restcountries.com. Currency rates: api.frankfurter.app. Crypto prices: api.coingecko.com/api/v3 (free tier, CORS). Geocoding: nominatim.openstreetmap.org (&format=json). Wikipedia: <lang>.wikipedia.org/api/rest_v1/page/summary/<title>. Books: openlibrary.org (search.json, covers). Google Books: www.googleapis.com/books/v1/volumes?q=... (keyless). TV shows: api.tvmaze.com. Anime: api.jikan.moe/v4. Recipes: themealdb.com/api (free key "1"). Cocktails: thecocktaildb.com/api (free key "1"). Dogs: dog.ceo/api. Pokemon: pokeapi.co. Universities: universities.hipolabs.com. Zip codes: api.zippopotam.us. IP geo: ipapi.co/json. Trivia: opentdb.com. Advice: api.adviceslip.com. Jokes: official-joke-api.appspot.com.\n` +
     `Deliver to the coder, in Markdown:\n` +
     `1. Which API(s) to use and the EXACT endpoint URL template with a realistic example request.\n` +
     `2. The JSON response shape and which fields map to which UI elements.\n` +
-    `3. Loading / empty-result / network-error handling, with user-facing messages in the site's language.\n` +
+    `3. Loading / empty-result / network-error handling, with user-facing messages in the site's language. Respect rate limits (cache in localStorage when sensible).\n` +
     `4. What the spec asks for that has NO free real source (e.g. accident history, mileage for Israeli cars) — the coder must show it as "לא זמין במקורות פתוחים" style notice, NEVER fabricate it as real data.\n` +
     `If nothing in the spec needs external data, reply exactly: NO_INTEGRATIONS\n` +
     `Return ONLY the Markdown instructions (English).`

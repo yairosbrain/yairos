@@ -11,6 +11,7 @@ import { askBrain, askBrainJson, BrainError, type BrainMessage } from "../brain"
 import {
   architectPrompt,
   coderPrompt,
+  connectorKeywordsPrompt,
   connectorPrompt,
   corePrompt,
   deployerPromptPrompt,
@@ -20,6 +21,7 @@ import {
   qaPrompt,
   updateCoderPrompt
 } from "../agents/prompts";
+import { apisToPromptBlock, findCandidateApis } from "../agents/apiCatalog";
 import { useData, type DataApi } from "../data/store";
 import { useI18n } from "../i18n";
 import { speak } from "../voice/tts";
@@ -268,7 +270,9 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
 
   const generateSite = useCallback(
     async (project: Project): Promise<SiteFile[]> => {
-      // CONNECTOR — find real, free, CORS-open APIs that can power the site
+      // CONNECTOR — find real, free, CORS-open APIs that can power the site.
+      // Phase 1: derive topic keywords and search the global public-API
+      // directory (GitHub public-apis project). Phase 2: write the plan.
       let apiPlan = "";
       await agentNote("connector", tRef.current("run.connector"), project.id);
       try {
@@ -276,14 +280,26 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
           project.id,
           "connector",
           project.spec.slice(0, 3000),
-          () =>
-            askBrain([
-              { role: "system", content: connectorPrompt() },
+          async () => {
+            let candidates = "";
+            try {
+              const { keywords } = await askBrainJson<{ keywords: string[] }>([
+                { role: "system", content: connectorKeywordsPrompt() },
+                { role: "user", content: project.spec.slice(0, 2500) }
+              ]);
+              const found = await findCandidateApis(keywords ?? []);
+              candidates = apisToPromptBlock(found);
+            } catch {
+              // Directory search failed — the built-in known-good list still applies
+            }
+            return askBrain([
+              { role: "system", content: connectorPrompt(candidates) },
               {
                 role: "user",
                 content: `Project name: ${project.name}\nOriginal request: ${project.request}\n\nSpecification:\n${project.spec}`
               }
-            ]),
+            ]);
+          },
           (r) => r
         );
         if (!plan.trim().startsWith("NO_INTEGRATIONS")) apiPlan = plan;
