@@ -341,7 +341,14 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
           () =>
             askBrainJson<{ files: SiteFile[] }>([
               { role: "system", content: qaPrompt() },
-              { role: "user", content: filesToPromptBlock(files) }
+              {
+                role: "user",
+                content:
+                  filesToPromptBlock(files) +
+                  (apiPlan
+                    ? `\n\n===== API INTEGRATION INSTRUCTIONS (verify the code matches these EXACTLY) =====\n${apiPlan}`
+                    : "")
+              }
             ]),
           (r) => r.files.map((f) => f.path).join(", ")
         );

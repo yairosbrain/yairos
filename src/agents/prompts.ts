@@ -94,6 +94,7 @@ export function coderPrompt(): string {
     `- Real, rich content based on the spec — never lorem ipsum. Use CSS gradients/shapes or inline SVG instead of external images.\n` +
     `- Beautiful modern design per the design section: exact palette, Google Fonts via <link>, smooth hover/scroll effects.\n` +
     `- index.html must exist. Split CSS into style.css and JS into script.js.\n` +
+    `- API integrations: copy endpoint URLs, resource IDs and response field names EXACTLY character-for-character from the integration instructions — NEVER retype them from memory or alter a single character. NEVER use CORS proxy services (allorigins, corsproxy, cors-anywhere...) — every supplied API is already CORS-enabled, fetch() it directly.\n` +
     `Return JSON only, no markdown fences:\n` +
     `{"files": [{"path": "index.html", "content": "..."}, {"path": "style.css", "content": "..."}, {"path": "script.js", "content": "..."}]}`
   );
@@ -107,6 +108,7 @@ export function qaPrompt(): string {
     `- RTL correctness when content is Hebrew\n` +
     `- Accessibility: alt texts, labels, focus states, color contrast\n` +
     `- Any absolute paths (must be relative for GitHub Pages sub-path hosting)\n` +
+    `- API calls: if integration instructions are provided, verify every endpoint URL, resource ID and field name matches them EXACTLY (character-for-character), and remove any CORS proxy wrapper (allorigins etc.) — supplied APIs are CORS-enabled and must be fetched directly\n` +
     `Return the COMPLETE corrected file set as JSON only, same schema, ALL files included even if unchanged:\n` +
     `{"files": [{"path": "...", "content": "..."}]}`
   );
