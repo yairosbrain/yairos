@@ -11,6 +11,7 @@ import { askBrain, askBrainJson, BrainError, type BrainMessage } from "../brain"
 import {
   architectPrompt,
   coderPrompt,
+  connectorPrompt,
   corePrompt,
   deployerPromptPrompt,
   designerPrompt,
@@ -38,7 +39,7 @@ interface OrchestratorApi {
   activeAgent: AgentId | null;
   /** Project currently waiting for user input (question flow / track choice) */
   activeProject: Project | null;
-  ask(text: string): Promise<void>;
+  ask(text: string, opts?: { projectId?: string }): Promise<void>;
   chooseTrack(mode: "auto" | "manual"): Promise<void>;
 }
 
@@ -267,6 +268,29 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
 
   const generateSite = useCallback(
     async (project: Project): Promise<SiteFile[]> => {
+      // CONNECTOR — find real, free, CORS-open APIs that can power the site
+      let apiPlan = "";
+      await agentNote("connector", tRef.current("run.connector"), project.id);
+      try {
+        const plan = await runStep(
+          project.id,
+          "connector",
+          project.spec.slice(0, 3000),
+          () =>
+            askBrain([
+              { role: "system", content: connectorPrompt() },
+              {
+                role: "user",
+                content: `Project name: ${project.name}\nOriginal request: ${project.request}\n\nSpecification:\n${project.spec}`
+              }
+            ]),
+          (r) => r
+        );
+        if (!plan.trim().startsWith("NO_INTEGRATIONS")) apiPlan = plan;
+      } catch {
+        // Connector failed — build without live integrations rather than blocking
+      }
+
       await agentNote("coder", tRef.current("run.coder"), project.id);
       const coded = await runStep(
         project.id,
@@ -277,7 +301,11 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
             { role: "system", content: coderPrompt() },
             {
               role: "user",
-              content: `Project name: ${project.name}\nOriginal request: ${project.request}\n\nSpecification:\n${project.spec}`
+              content:
+                `Project name: ${project.name}\nOriginal request: ${project.request}\n\nSpecification:\n${project.spec}` +
+                (apiPlan
+                  ? `\n\nREAL API INTEGRATIONS — the CONNECTOR department verified these real data sources. Implement them exactly as instructed (fetch from the browser, handle loading/empty/error states). Never present fabricated data as real:\n${apiPlan}`
+                  : "")
             }
           ]),
         (r) => r.files.map((f) => f.path).join(", ")
@@ -485,20 +513,46 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
   );
 
   const classify = useCallback(
-    async (text: string) => {
+    async (text: string, scoped?: Project) => {
       setBusy(true);
       setActiveAgent("core");
       try {
-        const recent: BrainMessage[] = dataRef.current.messages.slice(-8).map((m) => ({
-          role: m.role === "user" ? ("user" as const) : ("assistant" as const),
-          content: m.text.slice(0, 600)
-        }));
+        const recent: BrainMessage[] = dataRef.current.messages
+          .filter((m) => (scoped ? m.projectId === scoped.id : true))
+          .slice(-8)
+          .map((m) => ({
+            role: m.role === "user" ? ("user" as const) : ("assistant" as const),
+            content: m.text.slice(0, 600)
+          }));
+
+        // CORE's long-term memory: every project Yairos has built for the user
+        const projectsList = [...dataRef.current.projects]
+          .sort((a, b) => b.createdAt - a.createdAt)
+          .slice(0, 25)
+          .map(
+            (p) =>
+              `- "${p.name}" [${p.status}]${p.liveUrl ? ` live: ${p.liveUrl}` : ""}${p.repoUrl ? ` repo: ${p.repoUrl}` : ""}`
+          )
+          .join("\n");
+        let system = corePrompt(langRef.current);
+        if (projectsList) {
+          system += `\n\nYour shared memory — projects you already built for the user (you may reference them, their status and their live URLs when answering):\n${projectsList}`;
+        }
+        if (scoped) {
+          system +=
+            `\n\nThis conversation happens INSIDE the dedicated chat of project "${scoped.name}".` +
+            `\nOriginal request: ${scoped.request}` +
+            (scoped.liveUrl ? `\nLive site: ${scoped.liveUrl}` : "") +
+            (scoped.spec ? `\nSpec excerpt:\n${scoped.spec.slice(0, 1200)}` : "") +
+            `\nWhen the user asks to change/fix/add something, the intent is "update_site" for THIS project (projectName: "${scoped.name}"), unless they clearly ask for a brand-new separate site.`;
+        }
+
         const decision = await askBrainJson<{
           intent: "new_project" | "update_site" | "chat";
           projectName: string;
           reply: string;
         }>([
-          { role: "system", content: corePrompt(langRef.current) },
+          { role: "system", content: system },
           ...recent,
           { role: "user", content: text }
         ]);
@@ -517,14 +571,18 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
             (p) => p.status === "live" && p.repoUrl
           );
           const target =
+            (scoped?.status === "live" && scoped.repoUrl ? scoped : null) ??
             liveProjects.find(
               (p) =>
                 wanted &&
                 (p.name.toLowerCase().includes(wanted) ||
                   wanted.includes(p.name.toLowerCase()))
-            ) ?? (liveProjects.length === 1 ? liveProjects[0] : null);
+            ) ??
+            (liveProjects.length === 1 ? liveProjects[0] : null);
           if (!target) {
-            await say(tRef.current("run.whichProject"));
+            await say(tRef.current("run.whichProject"), {
+              projectId: scoped?.id
+            });
             return;
           }
           if (decision.reply) await say(decision.reply, { projectId: target.id });
@@ -533,9 +591,9 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        await say(decision.reply || "…");
+        await say(decision.reply || "…", scoped ? { projectId: scoped.id } : undefined);
       } catch (e) {
-        await reportError(e);
+        await reportError(e, scoped?.id);
       } finally {
         setActiveAgent(null);
         setBusy(false);
@@ -545,40 +603,49 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
   );
 
   const ask = useCallback(
-    async (text: string) => {
+    async (text: string, opts?: { projectId?: string }) => {
       const trimmed = text.trim();
       if (!trimmed || busy) return;
-      const project = activeProjectRef.current;
+      const active = activeProjectRef.current;
+      // A project-chat message is scoped to that project's own thread
+      const scoped = opts?.projectId
+        ? (dataRef.current.projects.find((p) => p.id === opts.projectId) ?? null)
+        : null;
+      const thread = scoped ?? active;
 
       await dataRef.current.addMessage({
         role: "user",
         text: trimmed,
         lang: langRef.current,
-        projectId: project?.id
+        projectId: thread?.id
       });
 
-      if (project && CANCEL_WORDS.includes(trimmed.toLowerCase())) {
-        await dataRef.current.updateProject(project.id, { status: "error" });
-        await say(tRef.current("run.canceled"), { projectId: project.id });
+      // The interrogation / track-choice flow only applies when we're talking
+      // to the active project (globally, or inside its own chat)
+      const flowProject = active && (!scoped || scoped.id === active.id) ? active : null;
+
+      if (flowProject && CANCEL_WORDS.includes(trimmed.toLowerCase())) {
+        await dataRef.current.updateProject(flowProject.id, { status: "error" });
+        await say(tRef.current("run.canceled"), { projectId: flowProject.id });
         return;
       }
 
-      if (project?.status === "interrogating" && project.questions.length) {
-        await handleAnswer(project, trimmed);
+      if (flowProject?.status === "interrogating" && flowProject.questions.length) {
+        await handleAnswer(flowProject, trimmed);
         return;
       }
 
-      if (project?.status === "awaiting_choice") {
+      if (flowProject?.status === "awaiting_choice") {
         const track = detectTrack(trimmed);
         if (track) {
           await chooseTrack(track);
         } else {
-          await say(tRef.current("run.specReady"), { projectId: project.id });
+          await say(tRef.current("run.specReady"), { projectId: flowProject.id });
         }
         return;
       }
 
-      await classify(trimmed);
+      await classify(trimmed, scoped ?? undefined);
     },
     [busy, say, handleAnswer, chooseTrack, classify]
   );

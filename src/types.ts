@@ -17,6 +17,7 @@ export type AgentId =
   | "interrogator"
   | "architect"
   | "designer"
+  | "connector"
   | "coder"
   | "qa"
   | "deployer";

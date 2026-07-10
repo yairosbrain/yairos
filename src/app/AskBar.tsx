@@ -7,19 +7,20 @@ import { useOrchestrator } from "../core/orchestrator";
 // The "Ask Yairos…" bar: text input + push-to-talk mic + ASK button.
 // The mic listens ONLY while held (button or Space on desktop).
 
-export default function AskBar() {
+export default function AskBar({ projectId }: { projectId?: string }) {
   const { t, lang } = useI18n();
   const { ask, busy } = useOrchestrator();
   const [text, setText] = useState("");
   const [listening, setListening] = useState(false);
   const pttRef = useRef<PushToTalk | null>(null);
   const supported = sttSupported();
+  const opts = projectId ? { projectId } : undefined;
 
   const submit = (value: string) => {
     const v = value.trim();
     if (!v) return;
     setText("");
-    void ask(v);
+    void ask(v, opts);
   };
 
   const startMic = () => {
@@ -30,7 +31,7 @@ export default function AskBar() {
       (interim) => setText(interim),
       (finalText) => {
         setText("");
-        void ask(finalText);
+        void ask(finalText, opts);
       },
       setListening
     );

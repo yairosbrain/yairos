@@ -38,7 +38,7 @@ function PackageActions({ text, name }: { text: string; name: string }) {
   );
 }
 
-function MessageBubble({ msg }: { msg: ChatMessage }) {
+export function MessageBubble({ msg }: { msg: ChatMessage }) {
   const { t } = useI18n();
   const data = useData();
 

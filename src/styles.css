@@ -722,6 +722,143 @@ button {
   padding: 0 10px;
 }
 
+/* ---------- Projects ---------- */
+.projects h2 {
+  margin: 0 0 14px;
+}
+
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 16px;
+}
+
+.project-card {
+  background: rgba(16, 30, 48, 0.65);
+  border: 1px solid rgba(55, 214, 255, 0.18);
+  border-radius: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.project-card:hover {
+  border-color: rgba(55, 214, 255, 0.55);
+  transform: translateY(-1px);
+}
+
+.project-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.project-name {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.status-chip {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(55, 214, 255, 0.12);
+  border: 1px solid rgba(55, 214, 255, 0.3);
+  white-space: nowrap;
+}
+
+.status-chip.s-live {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #86efac;
+}
+
+.status-chip.s-delivered {
+  background: rgba(45, 212, 191, 0.15);
+  border-color: rgba(45, 212, 191, 0.5);
+  color: #99f6e4;
+}
+
+.status-chip.s-error {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #fca5a5;
+}
+
+.project-date {
+  font-size: 12px;
+  opacity: 0.6;
+  margin-top: 4px;
+}
+
+.project-url {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--cyan);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-url:hover {
+  text-decoration: underline;
+}
+
+.project-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.project-actions a {
+  color: inherit;
+  opacity: 0.75;
+}
+
+.project-chat-cta {
+  margin-inline-start: auto;
+  color: var(--cyan);
+}
+
+.project-chat-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 4px 12px;
+  border-bottom: 1px solid rgba(55, 214, 255, 0.15);
+}
+
+.back-btn {
+  background: none;
+  border: 1px solid rgba(55, 214, 255, 0.3);
+  color: var(--cyan);
+  border-radius: 10px;
+  width: 34px;
+  height: 34px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.project-chat-name {
+  font-weight: 700;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-chat-live {
+  text-decoration: none;
+  font-size: 18px;
+}
+
 .logo-preview {
   display: block;
   width: 170px;

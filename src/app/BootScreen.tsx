@@ -5,7 +5,7 @@ import { speak } from "../voice/tts";
 const BOOT_LINES = [
   "> YAIROS CORE ............... ONLINE",
   "> NEURAL LATTICE ............ CALIBRATED",
-  "> KNOWLEDGE GALAXY .......... 7 NODES / 12 LINKS",
+  "> KNOWLEDGE GALAXY .......... 8 NODES / 13 LINKS",
   "> DOMAINS ................... WEB FACTORY",
   "> SPEECH SYNTHESIS .......... READY",
   "> AUDIO SENSORS ............. STANDING BY",

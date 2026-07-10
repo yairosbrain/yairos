@@ -1,6 +1,7 @@
 import { useState } from "react";
 import BootScreen from "./app/BootScreen";
 import TranscriptScreen from "./app/TranscriptScreen";
+import ProjectsScreen from "./app/ProjectsScreen";
 import SettingsScreen from "./app/SettingsScreen";
 import AgentCard from "./app/AgentCard";
 import AskBar from "./app/AskBar";
@@ -9,7 +10,7 @@ import { useI18n } from "./i18n";
 import { useOrchestrator } from "./core/orchestrator";
 import type { AgentId } from "./types";
 
-type Screen = "boot" | "galaxy" | "transcript" | "settings";
+type Screen = "boot" | "galaxy" | "transcript" | "projects" | "settings";
 
 function GalaxyScreen() {
   const { activeAgent, activeProject } = useOrchestrator();
@@ -58,6 +59,7 @@ export default function App() {
       <main className="content">
         {screen === "galaxy" && <GalaxyScreen />}
         {screen === "transcript" && <TranscriptScreen />}
+        {screen === "projects" && <ProjectsScreen />}
         {screen === "settings" && <SettingsScreen />}
       </main>
 
@@ -72,6 +74,13 @@ export default function App() {
         >
           <span className="nav-ico">☰</span>
           {t("nav.transcript")}
+        </button>
+        <button
+          className={screen === "projects" ? "on" : ""}
+          onClick={() => setScreen("projects")}
+        >
+          <span className="nav-ico">▤</span>
+          {t("nav.projects")}
         </button>
         <button className={screen === "settings" ? "on" : ""} onClick={() => setScreen("settings")}>
           <span className="nav-ico">⚙</span>
