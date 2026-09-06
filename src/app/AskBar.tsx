@@ -123,16 +123,21 @@ export default function AskBar({ projectId }: { projectId?: string }) {
           ✕
         </button>
       )}
-      <input
-        className="ask-input"
-        value={listening ? text || t("ask.listening") : text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") submit(text);
-        }}
-        placeholder={busy ? t("status.thinking") : t("ask.placeholder")}
-        readOnly={listening}
-      />
+      <div className="ask-shell">
+        <span className="ask-prompt" aria-hidden>
+          {listening ? "◉" : "$"}
+        </span>
+        <input
+          className="ask-input"
+          value={listening ? text || t("ask.listening") : text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submit(text);
+          }}
+          placeholder={busy ? t("status.thinking") : t("ask.placeholder")}
+          readOnly={listening}
+        />
+      </div>
       <button
         type="button"
         className="ask-btn"

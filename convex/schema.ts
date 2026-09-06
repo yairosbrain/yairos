@@ -39,6 +39,18 @@ export default defineSchema({
     ts: v.number()
   }).index("by_ts", ["ts"]),
 
+  // Rolling conversation memory — one row per thread ("global" or a project id).
+  // Older messages are folded into `summary` so CORE keeps the whole history
+  // in context without resending every message on every call.
+  conversationMemory: defineTable({
+    threadId: v.string(),
+    summary: v.string(),
+    // ts of the newest message already folded into the summary
+    coveredUpToTs: v.number(),
+    foldedCount: v.number(),
+    updatedAt: v.number()
+  }).index("by_thread", ["threadId"]),
+
   // Every agent run (this is what lights up the galaxy)
   agentRuns: defineTable({
     projectId: v.id("projects"),

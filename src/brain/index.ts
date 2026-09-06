@@ -87,6 +87,34 @@ export async function askBrainJson<T>(messages: BrainMessage[]): Promise<T> {
   throw new Error("Brain did not return valid JSON");
 }
 
+/**
+ * Like askBrainJson, but never throws on a malformed reply — it hands back the
+ * raw text instead. CORE uses this so that a model which answers the user
+ * beautifully but forgets the JSON wrapper still gets its answer through,
+ * rather than turning a good reply into an error bubble.
+ */
+export async function askBrainJsonOrText<T>(
+  messages: BrainMessage[]
+): Promise<{ json?: T; text: string }> {
+  const first = await askBrain(messages);
+  const parsed = tryParseJson<T>(first);
+  if (parsed !== undefined) return { json: parsed, text: first };
+
+  const retry = await askBrain([
+    ...messages,
+    { role: "assistant", content: first },
+    {
+      role: "user",
+      content:
+        "Your previous reply was not valid JSON. Reply again with ONLY the valid JSON, no markdown fences, no explanation."
+    }
+  ]);
+  const parsed2 = tryParseJson<T>(retry);
+  if (parsed2 !== undefined) return { json: parsed2, text: retry };
+  // Both attempts were prose — the first one is the one actually aimed at the user
+  return { text: first };
+}
+
 export function tryParseJson<T>(text: string): T | undefined {
   const cleaned = text
     .replace(/^[\s\S]*?```(?:json)?\s*\n?/, (m) => (m.includes("```") ? "" : m))

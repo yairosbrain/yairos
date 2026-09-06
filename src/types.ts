@@ -48,6 +48,19 @@ export interface ChatMessage {
   ts: number;
 }
 
+/**
+ * Rolling memory of one conversation thread. `summary` covers every message
+ * up to `coveredUpToTs`; everything newer is still sent to the brain verbatim.
+ */
+export interface ConversationMemory {
+  id: string;
+  threadId: string;
+  summary: string;
+  coveredUpToTs: number;
+  foldedCount: number;
+  updatedAt: number;
+}
+
 export interface AgentRun {
   id: string;
   projectId: string;

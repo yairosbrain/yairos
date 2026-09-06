@@ -44,8 +44,13 @@ export default function App() {
 
   return (
     <div className="shell">
-      <header className="topbar">
-        <span className="brand">Y.A.I.R.O.S</span>
+      <header className="topbar" dir="ltr">
+        <span className="brand">
+          <span className="brand-user">yairos@core</span>
+          <span className="brand-sep">:</span>
+          <span className="brand-path">~</span>
+          <span className="brand-sep">$</span>
+        </span>
         <span className={`status-dot ${busy ? "busy" : ""}`} title={busy ? t("status.thinking") : t("status.idle")} />
         <button
           className="lang-toggle"

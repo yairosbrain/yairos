@@ -7,7 +7,16 @@ import {
   useState,
   type ReactNode
 } from "react";
-import { askBrain, askBrainJson, BrainError, type BrainMessage } from "../brain";
+import { askBrain, askBrainJson, askBrainJsonOrText, BrainError } from "../brain";
+import {
+  foldTranscript,
+  memoryOf,
+  planContext,
+  summaryBlock,
+  SUMMARY_MAX,
+  threadIdOf,
+  toBrainMessages
+} from "../brain/memory";
 import {
   architectPrompt,
   coderPrompt,
@@ -19,6 +28,7 @@ import {
   filesToPromptBlock,
   interrogatorPrompt,
   qaPrompt,
+  summarizerPrompt,
   updateCoderPrompt
 } from "../agents/prompts";
 import { apisToPromptBlock, findCandidateApis } from "../agents/apiCatalog";
@@ -540,13 +550,47 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
       setBusy(true);
       setActiveAgent("core");
       try {
-        const recent: BrainMessage[] = dataRef.current.messages
-          .filter((m) => (scoped ? m.projectId === scoped.id : true))
-          .slice(-8)
-          .map((m) => ({
-            role: m.role === "user" ? ("user" as const) : ("assistant" as const),
-            content: m.text.slice(0, 600)
-          }));
+        const threadId = threadIdOf(scoped?.id);
+        const plan = planContext(
+          dataRef.current.messages,
+          memoryOf(dataRef.current.memories, threadId),
+          scoped?.id
+        );
+
+        // Fold whatever overflowed the live window into the rolling summary
+        // BEFORE answering, so the reply is written with the full history.
+        let summary = plan.summary;
+        let verbatim = plan.verbatim;
+        if (plan.toFold.length) {
+          try {
+            const rewritten = await askBrain([
+              { role: "system", content: summarizerPrompt(langRef.current) },
+              {
+                role: "user",
+                content:
+                  `===== CURRENT MEMORY =====\n${plan.summary || "(empty — this is the first fold)"}\n\n` +
+                  `===== NEXT CHUNK OF CONVERSATION =====\n${foldTranscript(plan.toFold)}`
+              }
+            ]);
+            summary = rewritten.slice(0, SUMMARY_MAX);
+            await dataRef.current.setMemory(
+              threadId,
+              summary,
+              plan.foldUpToTs,
+              plan.foldedCount
+            );
+          } catch {
+            // Summariser failed — send the whole tail verbatim this turn rather
+            // than silently losing the middle of the conversation.
+            summary = plan.summary;
+            verbatim = [...plan.toFold, ...plan.verbatim];
+          }
+        }
+
+        // `ask()` stores the user's message before calling us, but the store may
+        // not have re-rendered yet — make sure it appears exactly once.
+        const last = verbatim[verbatim.length - 1];
+        if (last && last.role === "user" && last.text === text) verbatim = verbatim.slice(0, -1);
 
         // CORE's long-term memory: every project Yairos has built for the user
         const projectsList = [...dataRef.current.projects]
@@ -557,7 +601,7 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
               `- "${p.name}" [${p.status}]${p.liveUrl ? ` live: ${p.liveUrl}` : ""}${p.repoUrl ? ` repo: ${p.repoUrl}` : ""}`
           )
           .join("\n");
-        let system = corePrompt(langRef.current);
+        let system = corePrompt(langRef.current) + summaryBlock(summary);
         if (projectsList) {
           system += `\n\nYour shared memory — projects you already built for the user (you may reference them, their status and their live URLs when answering):\n${projectsList}`;
         }
@@ -570,15 +614,22 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
             `\nWhen the user asks to change/fix/add something, the intent is "update_site" for THIS project (projectName: "${scoped.name}"), unless they clearly ask for a brand-new separate site.`;
         }
 
-        const decision = await askBrainJson<{
+        const { json: decision, text: raw } = await askBrainJsonOrText<{
           intent: "new_project" | "update_site" | "chat";
           projectName: string;
           reply: string;
         }>([
           { role: "system", content: system },
-          ...recent,
+          ...toBrainMessages(verbatim),
           { role: "user", content: text }
         ]);
+
+        // Answered in prose instead of JSON — that prose is still an answer to
+        // the user, so deliver it rather than showing them an error.
+        if (!decision) {
+          await say(raw, scoped ? { projectId: scoped.id } : undefined);
+          return;
+        }
 
         if (decision.intent === "new_project") {
           const name = decision.projectName?.trim() || text.slice(0, 40);

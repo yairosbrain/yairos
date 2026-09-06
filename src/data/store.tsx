@@ -13,7 +13,7 @@ import {
   useQuery
 } from "convex/react";
 import { anyApi } from "convex/server";
-import type { AgentRun, ChatMessage, Project } from "../types";
+import type { AgentRun, ChatMessage, ConversationMemory, Project } from "../types";
 
 // Shared memory. Two modes with the same interface:
 //  - "convex": real-time sync across all devices (when VITE_CONVEX_URL is set)
@@ -24,11 +24,18 @@ export interface DataApi {
   projects: Project[];
   messages: ChatMessage[];
   agentRuns: AgentRun[];
+  memories: ConversationMemory[];
   createProject(name: string, request: string): Promise<string>;
   updateProject(id: string, patch: Partial<Omit<Project, "id" | "createdAt">>): Promise<void>;
   addMessage(msg: Omit<ChatMessage, "id" | "ts">): Promise<void>;
   addAgentRun(projectId: string, agent: AgentRun["agent"], input: string): Promise<string>;
   finishAgentRun(id: string, output: string, status: "done" | "error"): Promise<void>;
+  setMemory(
+    threadId: string,
+    summary: string,
+    coveredUpToTs: number,
+    foldedCount: number
+  ): Promise<void>;
 }
 
 const Ctx = createContext<DataApi>(null!);
@@ -65,12 +72,14 @@ function ConvexData({ children }: { children: ReactNode }) {
   const projectsRaw = useQuery(anyApi.projects.list) as ConvexDoc[] | undefined;
   const messagesRaw = useQuery(anyApi.messages.list) as ConvexDoc[] | undefined;
   const runsRaw = useQuery(anyApi.agentRuns.list) as ConvexDoc[] | undefined;
+  const memoriesRaw = useQuery(anyApi.conversationMemory.list) as ConvexDoc[] | undefined;
 
   const createProjectMut = useMutation(anyApi.projects.create);
   const updateProjectMut = useMutation(anyApi.projects.update);
   const addMessageMut = useMutation(anyApi.messages.add);
   const addRunMut = useMutation(anyApi.agentRuns.add);
   const updateRunMut = useMutation(anyApi.agentRuns.update);
+  const setMemoryMut = useMutation(anyApi.conversationMemory.set);
 
   const projects = useMemo(
     () =>
@@ -92,6 +101,13 @@ function ConvexData({ children }: { children: ReactNode }) {
         (d) => ({ ...(d as unknown as AgentRun), id: d._id }) as AgentRun
       ),
     [runsRaw]
+  );
+  const memories = useMemo(
+    () =>
+      (memoriesRaw ?? []).map(
+        (d) => ({ ...(d as unknown as ConversationMemory), id: d._id }) as ConversationMemory
+      ),
+    [memoriesRaw]
   );
 
   const createProject = useCallback(
@@ -128,6 +144,17 @@ function ConvexData({ children }: { children: ReactNode }) {
     },
     [updateRunMut]
   );
+  const setMemory = useCallback(
+    async (
+      threadId: string,
+      summary: string,
+      coveredUpToTs: number,
+      foldedCount: number
+    ) => {
+      await setMemoryMut({ threadId, summary, coveredUpToTs, foldedCount });
+    },
+    [setMemoryMut]
+  );
 
   const value = useMemo<DataApi>(
     () => ({
@@ -135,21 +162,25 @@ function ConvexData({ children }: { children: ReactNode }) {
       projects,
       messages,
       agentRuns,
+      memories,
       createProject,
       updateProject,
       addMessage,
       addAgentRun,
-      finishAgentRun
+      finishAgentRun,
+      setMemory
     }),
     [
       projects,
       messages,
       agentRuns,
+      memories,
       createProject,
       updateProject,
       addMessage,
       addAgentRun,
-      finishAgentRun
+      finishAgentRun,
+      setMemory
     ]
   );
 
@@ -184,6 +215,9 @@ function LocalData({ children }: { children: ReactNode }) {
   );
   const [agentRuns, setAgentRuns] = useState<AgentRun[]>(() =>
     load<AgentRun>("yairos.agentRuns")
+  );
+  const [memories, setMemories] = useState<ConversationMemory[]>(() =>
+    load<ConversationMemory>("yairos.memories")
   );
 
   const createProject = useCallback(async (name: string, request: string) => {
@@ -260,27 +294,57 @@ function LocalData({ children }: { children: ReactNode }) {
     []
   );
 
+  const setMemory = useCallback(
+    async (
+      threadId: string,
+      summary: string,
+      coveredUpToTs: number,
+      foldedCount: number
+    ) => {
+      setMemories((prev) => {
+        const row: ConversationMemory = {
+          id: prev.find((m) => m.threadId === threadId)?.id ?? uid(),
+          threadId,
+          summary,
+          coveredUpToTs,
+          foldedCount,
+          updatedAt: Date.now()
+        };
+        const next = prev.some((m) => m.threadId === threadId)
+          ? prev.map((m) => (m.threadId === threadId ? row : m))
+          : [...prev, row];
+        save("yairos.memories", next);
+        return next;
+      });
+    },
+    []
+  );
+
   const value = useMemo<DataApi>(
     () => ({
       mode: "local",
       projects,
       messages,
       agentRuns,
+      memories,
       createProject,
       updateProject,
       addMessage,
       addAgentRun,
-      finishAgentRun
+      finishAgentRun,
+      setMemory
     }),
     [
       projects,
       messages,
       agentRuns,
+      memories,
       createProject,
       updateProject,
       addMessage,
       addAgentRun,
-      finishAgentRun
+      finishAgentRun,
+      setMemory
     ]
   );
 
