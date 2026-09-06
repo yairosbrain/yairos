@@ -5,6 +5,7 @@ import { useData } from "../data/store";
 import { askBrain } from "../brain";
 import { downloadLogo, logoDataUrl } from "./logo";
 import { OPTIONAL_AGENTS } from "../agents/registry";
+import { verifyToken, type TokenCheck } from "../deploy/github";
 import type { BrainProviderId, DeviceSettings } from "../types";
 
 export default function SettingsScreen() {
@@ -12,6 +13,9 @@ export default function SettingsScreen() {
   const data = useData();
   const [s, setS] = useState<DeviceSettings>(getSettings());
   const [testState, setTestState] = useState<"idle" | "testing" | "ok" | string>("idle");
+  const [tokenState, setTokenState] = useState<
+    { phase: "idle" } | { phase: "testing" } | { phase: "done"; res: TokenCheck }
+  >({ phase: "idle" });
   const logoPreview = useMemo(() => logoDataUrl(512), []);
 
   const update = (patch: Partial<DeviceSettings>) => {
@@ -28,6 +32,12 @@ export default function SettingsScreen() {
     } catch (e) {
       setTestState(e instanceof Error ? e.message : String(e));
     }
+  };
+
+  const checkToken = async () => {
+    setTokenState({ phase: "testing" });
+    const res = await verifyToken(s.githubToken);
+    setTokenState({ phase: "done", res });
   };
 
   return (
@@ -172,6 +182,44 @@ export default function SettingsScreen() {
           />
         </div>
         <p className="help">{t("settings.githubToken.help")}</p>
+        <button
+          className="test-btn"
+          onClick={() => void checkToken()}
+          disabled={tokenState.phase === "testing" || !s.githubToken.trim()}
+        >
+          {tokenState.phase === "testing"
+            ? t("settings.testing")
+            : t("settings.testToken")}
+        </button>
+        {tokenState.phase === "done" && !tokenState.res.ok && (
+          <div className="test-fail">
+            {tokenState.res.error === "bad-credentials"
+              ? t("settings.tokenBad")
+              : t("settings.tokenFail", { error: tokenState.res.error ?? "?" })}
+          </div>
+        )}
+        {tokenState.phase === "done" && tokenState.res.ok && (
+          <>
+            <div className="test-ok">
+              {t("settings.tokenOk", { login: tokenState.res.login ?? "?" })}
+            </div>
+            {tokenState.res.login !== s.githubOwner.trim() && (
+              <div className="test-fail">
+                {t("settings.tokenWrongUser", {
+                  login: tokenState.res.login ?? "?",
+                  owner: s.githubOwner.trim()
+                })}
+              </div>
+            )}
+            {tokenState.res.missing.length > 0 && (
+              <div className="test-fail">
+                {t("settings.tokenMissing", {
+                  scopes: tokenState.res.missing.join(", ")
+                })}
+              </div>
+            )}
+          </>
+        )}
         <div className="field">
           <label>{t("settings.githubOwner")}</label>
           <input

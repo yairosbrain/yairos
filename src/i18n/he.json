@@ -45,7 +45,7 @@
   "settings.claudeKey": "מפתח Claude",
   "settings.puterModel": "מודל Puter",
   "settings.githubToken": "GitHub Token (למסלול א)",
-  "settings.githubToken.help": "טוקן עם הרשאות Contents + Pages + Administration (או classic token עם scope repo). נשמר רק במכשיר הזה.",
+  "settings.githubToken.help": "טוקן classic עם ההרשאות repo ו-delete_repo (delete_repo נחוץ למחיקת פרויקטים). נשמר רק במכשיר הזה.",
   "settings.githubOwner": "משתמש GitHub",
   "settings.keysLocal": "כל המפתחות נשמרים רק ב-localStorage של המכשיר הזה — לא בקוד, לא בענן.",
   "settings.testBrain": "בדוק את המוח",
@@ -198,5 +198,11 @@
   "del.deleting": "מוחק…",
   "del.noToken": "צריך GitHub Token בהגדרות כדי למחוק את הריפו.",
   "del.scope": "לטוקן אין הרשאת delete_repo. צור טוקן חדש עם ההרשאה הזו (classic: delete_repo · fine-grained: Administration ← Read and write) ונסה שוב. שום דבר לא נמחק.",
-  "del.repoFailed": "מחיקת הריפו נכשלה: {detail}. שום דבר לא נמחק."
+  "del.repoFailed": "מחיקת הריפו נכשלה: {detail}. שום דבר לא נמחק.",
+  "settings.testToken": "בדוק את הטוקן",
+  "settings.tokenOk": "הטוקן תקין — מחובר כ-{login}",
+  "settings.tokenBad": "הטוקן נדחה (Bad credentials). הוא פג, נשלל, או הודבק חלקית. צור חדש והדבק שוב.",
+  "settings.tokenFail": "הבדיקה נכשלה: {error}",
+  "settings.tokenWrongUser": "הטוקן שייך ל-{login}, אבל 'משתמש GitHub' מוגדר ל-{owner}. תקן אחד מהם — אחרת הבנייה תיכשל.",
+  "settings.tokenMissing": "חסרות הרשאות: {scopes}. צור טוקן חדש עם ההרשאות האלה."
 }

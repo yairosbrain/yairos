@@ -227,6 +227,64 @@ export function parseRepoUrl(
   return m ? { owner: m[1], repo: m[2] } : null;
 }
 
+export interface TokenCheck {
+  ok: boolean;
+  /** GitHub login the token actually belongs to */
+  login?: string;
+  /** Scopes present on a classic token; empty for fine-grained ones */
+  scopes: string[];
+  missing: string[];
+  error?: string;
+}
+
+/**
+ * Verify the stored token before a build depends on it. A 401 here is the
+ * whole failure, surfaced in one second instead of halfway through a deploy.
+ *
+ * Classic tokens report their scopes in x-oauth-scopes, so missing ones can be
+ * named exactly. Fine-grained tokens send no such header — absence of scopes is
+ * therefore not treated as missing permission, only as unknown.
+ */
+export async function verifyToken(token: string): Promise<TokenCheck> {
+  const trimmed = token.trim();
+  if (!trimmed) return { ok: false, scopes: [], missing: [], error: "empty" };
+
+  let res: Response;
+  try {
+    res = await gh(trimmed, "GET", "/user");
+  } catch (e) {
+    return {
+      ok: false,
+      scopes: [],
+      missing: [],
+      error: e instanceof Error ? e.message : String(e)
+    };
+  }
+
+  if (res.status === 401) {
+    return { ok: false, scopes: [], missing: [], error: "bad-credentials" };
+  }
+  if (!res.ok) {
+    return { ok: false, scopes: [], missing: [], error: `HTTP ${res.status}` };
+  }
+
+  const login = ((await res.json()) as { login?: string }).login;
+  const header = res.headers.get("x-oauth-scopes") ?? "";
+  const scopes = header
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // No header at all means a fine-grained token: its permissions live
+  // server-side and cannot be introspected, so don't guess they're absent.
+  const fineGrained = !res.headers.has("x-oauth-scopes");
+  const missing = fineGrained
+    ? []
+    : ["repo", "delete_repo"].filter((s) => !scopes.includes(s));
+
+  return { ok: true, login, scopes, missing };
+}
+
 export type RepoDeleteOutcome =
   | { ok: true; alreadyGone?: boolean }
   | { ok: false; reason: "scope" | "auth" | "other"; detail: string };

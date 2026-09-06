@@ -45,7 +45,7 @@
   "settings.claudeKey": "Claude key",
   "settings.puterModel": "Puter model",
   "settings.githubToken": "GitHub Token (for Track A)",
-  "settings.githubToken.help": "Token with Contents + Pages + Administration permissions (or a classic token with repo scope). Stored only on this device.",
+  "settings.githubToken.help": "Classic token with the repo and delete_repo scopes (delete_repo is needed to remove projects). Stored on this device only.",
   "settings.githubOwner": "GitHub username",
   "settings.keysLocal": "All keys are stored only in this device's localStorage — never in code, never in the cloud.",
   "settings.testBrain": "Test brain",
@@ -198,5 +198,11 @@
   "del.deleting": "Deleting…",
   "del.noToken": "A GitHub token is required in settings to delete the repository.",
   "del.scope": "The token lacks delete_repo. Create a new token with it (classic: delete_repo · fine-grained: Administration -> Read and write) and retry. Nothing was deleted.",
-  "del.repoFailed": "Repository delete failed: {detail}. Nothing was deleted."
+  "del.repoFailed": "Repository delete failed: {detail}. Nothing was deleted.",
+  "settings.testToken": "Check token",
+  "settings.tokenOk": "Token valid — signed in as {login}",
+  "settings.tokenBad": "Token rejected (Bad credentials). It expired, was revoked, or was pasted incompletely. Create a new one and paste it again.",
+  "settings.tokenFail": "Check failed: {error}",
+  "settings.tokenWrongUser": "This token belongs to {login}, but 'GitHub user' is set to {owner}. Fix one of them or builds will fail.",
+  "settings.tokenMissing": "Missing scopes: {scopes}. Create a new token with them."
 }
