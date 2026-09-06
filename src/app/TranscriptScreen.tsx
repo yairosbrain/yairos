@@ -4,7 +4,7 @@ import { useI18n } from "../i18n";
 import { useOrchestrator } from "../core/orchestrator";
 import { agentById } from "../agents/registry";
 import { renderMarkdown } from "./markdown";
-import AskBar from "./AskBar";
+import { useWm } from "../os/WindowManager";
 import type { AgentId, ChatMessage } from "../types";
 
 function PackageActions({ text, name }: { text: string; name: string }) {
@@ -109,11 +109,12 @@ export default function TranscriptScreen() {
   const { t } = useI18n();
   const data = useData();
   const { ask, chooseTrack, activeProject, busy } = useOrchestrator();
+  const { console: consoleLines } = useWm();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [data.messages.length]);
+  }, [data.messages.length, consoleLines.length]);
 
   const chips =
     activeProject?.status === "awaiting_choice"
@@ -140,6 +141,11 @@ export default function TranscriptScreen() {
           <MessageBubble key={m.id} msg={m} />
         ))}
         {busy && <div className="msg yairos thinking">{t("status.thinking")}</div>}
+        {consoleLines.length > 0 && (
+          <pre className="shell-out" dir="ltr">
+            {consoleLines.join("\n")}
+          </pre>
+        )}
         <div ref={bottomRef} />
       </div>
       {chips.length > 0 && (
@@ -151,7 +157,6 @@ export default function TranscriptScreen() {
           ))}
         </div>
       )}
-      <AskBar />
     </div>
   );
 }

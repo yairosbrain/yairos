@@ -140,7 +140,12 @@ function ConvexData({ children }: { children: ReactNode }) {
   );
   const finishAgentRun = useCallback(
     async (id: string, output: string, status: "done" | "error") => {
-      await updateRunMut({ id, output: output.slice(0, 20000), status });
+      await updateRunMut({
+        id,
+        output: output.slice(0, 20000),
+        status,
+        endTs: Date.now()
+      });
     },
     [updateRunMut]
   );
@@ -285,7 +290,9 @@ function LocalData({ children }: { children: ReactNode }) {
     async (id: string, output: string, status: "done" | "error") => {
       setAgentRuns((prev) => {
         const next = prev.map((r) =>
-          r.id === id ? { ...r, output: output.slice(0, 20000), status } : r
+          r.id === id
+            ? { ...r, output: output.slice(0, 20000), status, endTs: Date.now() }
+            : r
         );
         save("yairos.agentRuns", next);
         return next;

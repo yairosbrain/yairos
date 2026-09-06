@@ -1097,3 +1097,498 @@ button {
   font-size: 15px;
   opacity: 0.9;
 }
+
+/* ================= OS shell: desktop, windows, dock ================= */
+
+.desktop {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  /* Faint grid, so an empty desktop still reads as a surface */
+  background-image:
+    linear-gradient(rgba(59, 158, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 158, 255, 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.desktop-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 20px;
+}
+
+.hint-art {
+  margin: 0;
+  color: var(--blue-dim);
+  font-size: clamp(7px, 1.7vw, 12px);
+  line-height: 1.15;
+  white-space: pre;
+}
+
+.hint-line {
+  margin: 0;
+  font-size: 13px;
+  max-width: 44ch;
+  line-height: 1.6;
+}
+
+.hint-cmds {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.hint-cmd {
+  background: var(--blue-deep);
+  border: 1px solid var(--blue-dim);
+  color: var(--blue);
+  border-radius: var(--radius);
+  padding: 6px 16px;
+  font-family: var(--mono);
+  font-size: 13px;
+}
+
+.hint-cmd::before {
+  content: "$ ";
+  opacity: 0.6;
+}
+
+.hint-cmd:hover {
+  background: var(--blue);
+  color: #001222;
+}
+
+/* ---------- Window frame ---------- */
+.window {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.75);
+  animation: winin 0.14s ease-out;
+}
+
+@keyframes winin {
+  from {
+    opacity: 0;
+    transform: scale(0.985);
+  }
+}
+
+.window.focused {
+  border-color: var(--blue-dim);
+  box-shadow: 0 12px 44px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(59, 158, 255, 0.18);
+}
+
+.window.maximized {
+  inset: 0;
+  width: auto !important;
+  height: auto !important;
+  z-index: 999 !important;
+}
+
+.win-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px 0 10px;
+  height: 30px;
+  flex-shrink: 0;
+  background: #000;
+  border-bottom: 1px solid var(--line);
+  cursor: default;
+  user-select: none;
+  touch-action: none;
+  direction: ltr;
+}
+
+.window.focused .win-title {
+  background: var(--blue-deep);
+  border-bottom-color: var(--blue-dim);
+}
+
+.win-ico {
+  color: var(--blue);
+  font-size: 12px;
+}
+
+.win-name {
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.win-cmd {
+  font-size: 11px;
+  color: var(--text-dim);
+  opacity: 0.75;
+}
+
+.win-cmd::before {
+  content: "~/";
+}
+
+.win-controls {
+  margin-inline-start: auto;
+  display: flex;
+  gap: 2px;
+}
+
+.win-btn {
+  width: 24px;
+  height: 22px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 13px;
+  line-height: 1;
+  border-radius: 2px;
+}
+
+.win-btn:hover {
+  border-color: var(--blue-dim);
+  color: var(--blue);
+  background: rgba(59, 158, 255, 0.1);
+}
+
+.win-btn.danger:hover {
+  border-color: var(--error);
+  color: var(--error);
+  background: rgba(255, 92, 108, 0.12);
+}
+
+.win-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Screens were written to fill a viewport; inside a window they fill the body */
+.win-body > .screen,
+.win-body > .ops,
+.win-body > .galaxy-app {
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.win-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  touch-action: none;
+  background: linear-gradient(
+    135deg,
+    transparent 0 45%,
+    var(--blue-dim) 45% 55%,
+    transparent 55% 72%,
+    var(--blue-dim) 72% 82%,
+    transparent 82%
+  );
+}
+
+.galaxy-app {
+  position: relative;
+}
+
+/* ---------- Dock ---------- */
+.dock {
+  display: flex;
+  border-top: 1px solid var(--line);
+  background: #000;
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 6;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.dock::-webkit-scrollbar {
+  display: none;
+}
+
+.dock-btn {
+  flex: 1 0 auto;
+  min-width: 84px;
+  background: transparent;
+  border: none;
+  border-top: 2px solid transparent;
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 7px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.dock-btn:hover:not(:disabled) {
+  color: var(--blue-pale);
+  background: rgba(10, 35, 64, 0.5);
+}
+
+/* An open-but-unfocused app keeps a dim marker, like a running job */
+.dock-btn.running {
+  color: var(--blue-pale);
+  border-top-color: var(--blue-dim);
+}
+
+.dock-btn.on {
+  color: var(--blue);
+  border-top-color: var(--blue);
+  background: var(--blue-deep);
+}
+
+.dock-btn.pending {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.dock-ico {
+  font-size: 14px;
+}
+
+.dock-name {
+  white-space: nowrap;
+}
+
+/* ---------- Shell output inside the terminal window ---------- */
+.shell-out {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  background: #000;
+  border: 1px solid var(--line-soft);
+  border-inline-start: 2px solid var(--blue-dim);
+  border-radius: var(--radius);
+  color: var(--blue-pale);
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  align-self: stretch;
+}
+
+/* ---------- Ops monitor ---------- */
+.ops {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  font-size: 12px;
+}
+
+.ops-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+  flex-shrink: 0;
+}
+
+.ops-stat {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  font-size: 11.5px;
+}
+
+.ops-k {
+  color: var(--text-dim);
+}
+
+.ops-k::after {
+  content: ":";
+}
+
+.ops-v {
+  color: var(--blue-pale);
+}
+
+.ops-v.convex,
+.ops-v.ok,
+.ops .ok {
+  color: var(--ok);
+}
+
+.ops-v.local {
+  color: var(--text-dim);
+}
+
+.ops-v.warn,
+.ops .warn {
+  color: var(--warn);
+}
+
+.ops .bad {
+  color: var(--error);
+}
+
+.ops-table {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+
+.ops-row {
+  display: grid;
+  grid-template-columns: 70px 1fr 46px 62px 56px 56px 76px;
+  gap: 8px;
+  padding: 5px 12px;
+  align-items: center;
+  border-bottom: 1px solid var(--line-soft);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ops-row:hover:not(.ops-th) {
+  background: rgba(10, 35, 64, 0.5);
+}
+
+.ops-th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #000;
+  color: var(--text-dim);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  cursor: default;
+  border-bottom-color: var(--line);
+}
+
+.ops-row.open {
+  background: var(--blue-deep);
+}
+
+.ops-row .c-pid {
+  color: var(--text-dim);
+}
+
+.ops-row .c-dept {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ops-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.c-stat.s-done {
+  color: var(--ok);
+}
+
+.c-stat.s-error {
+  color: var(--error);
+}
+
+.c-stat.s-running {
+  color: var(--warn);
+  animation: pulse 0.9s ease-in-out infinite;
+}
+
+.ops-row .c-time,
+.ops-row .c-io,
+.ops-row .c-when {
+  color: var(--text-dim);
+  text-align: right;
+}
+
+.ops-empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+.ops-detail {
+  padding: 8px 12px 12px;
+  background: #000;
+  border-bottom: 1px solid var(--line);
+}
+
+.ops-detail-k {
+  color: var(--blue-dim);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  margin-bottom: 3px;
+}
+
+.ops-detail pre {
+  margin: 0 0 10px;
+  padding: 8px;
+  max-height: 180px;
+  overflow: auto;
+  background: var(--bg-2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  color: var(--text-dim);
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------- Phone layout: one window at a time, dock is the switcher ---------- */
+@media (max-width: 820px) {
+  .window {
+    inset: 0;
+    width: auto !important;
+    height: auto !important;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    z-index: auto !important;
+  }
+
+  .window.focused {
+    box-shadow: none;
+  }
+
+  .desktop-hint .hint-art {
+    font-size: 8px;
+  }
+
+  .dock-btn {
+    min-width: 72px;
+    font-size: 10px;
+  }
+
+  .ops-row {
+    grid-template-columns: 1fr 44px 56px 50px 66px;
+    font-size: 11px;
+  }
+
+  /* Byte columns are the first thing to go when space is tight */
+  .ops-row .c-pid,
+  .ops-row .c-io:last-of-type {
+    display: none;
+  }
+}

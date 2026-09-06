@@ -3,15 +3,22 @@ import { useI18n } from "../i18n";
 import { createPushToTalk, sttSupported, type PushToTalk } from "../voice/stt";
 import { stopSpeaking } from "../voice/tts";
 import { useOrchestrator } from "../core/orchestrator";
+import { useWm } from "../os/WindowManager";
+import { runCommand } from "../os/commands";
 
-// The "Ask Yairos…" bar: text input + push-to-talk mic + ASK button.
-// The mic listens ONLY while held (button or Space on desktop).
+// The system prompt line. It is a shell first and a chat second: input that
+// parses as a command runs locally and for free; everything else goes to the
+// brain. Voice always goes to the brain — you don't dictate `ls`.
 
 export default function AskBar({ projectId }: { projectId?: string }) {
   const { t, lang } = useI18n();
   const { ask, busy } = useOrchestrator();
+  const wm = useWm();
   const [text, setText] = useState("");
   const [listening, setListening] = useState(false);
+  const [history, setHistory] = useState<string[]>([]);
+  /** Where Up/Down currently sit in `history`; null = at the live prompt */
+  const histIdx = useRef<number | null>(null);
   const pttRef = useRef<PushToTalk | null>(null);
   const supported = sttSupported();
   const opts = projectId ? { projectId } : undefined;
@@ -20,7 +27,27 @@ export default function AskBar({ projectId }: { projectId?: string }) {
     const v = value.trim();
     if (!v) return;
     setText("");
+    setHistory((prev) => [...prev.slice(-49), v]);
+    histIdx.current = null;
+    // Shell first — a handled command never reaches (or costs) the brain
+    if (runCommand(v, wm, t).handled) return;
     void ask(v, opts);
+  };
+
+  /** Up/Down walk the command history, the way a real shell does */
+  const recall = (dir: -1 | 1) => {
+    if (!history.length) return;
+    const cur = histIdx.current;
+    let next: number | null;
+    if (dir === -1) {
+      next = cur === null ? history.length - 1 : Math.max(0, cur - 1);
+    } else {
+      if (cur === null) return;
+      // Walking past the newest entry returns to an empty prompt
+      next = cur + 1 > history.length - 1 ? null : cur + 1;
+    }
+    histIdx.current = next;
+    setText(next === null ? "" : history[next]);
   };
 
   const startMic = () => {
@@ -132,7 +159,15 @@ export default function AskBar({ projectId }: { projectId?: string }) {
           value={listening ? text || t("ask.listening") : text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") submit(text);
+            if (e.key === "Enter") return submit(text);
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              return recall(-1);
+            }
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              return recall(1);
+            }
           }}
           placeholder={busy ? t("status.thinking") : t("ask.placeholder")}
           readOnly={listening}

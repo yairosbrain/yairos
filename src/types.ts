@@ -69,6 +69,8 @@ export interface AgentRun {
   output: string;
   status: "running" | "done" | "error";
   ts: number;
+  /** Set when the run finishes; absent while it is still running */
+  endTs?: number;
 }
 
 export interface DeviceSettings {

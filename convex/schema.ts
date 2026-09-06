@@ -58,6 +58,8 @@ export default defineSchema({
     input: v.string(),
     output: v.string(),
     status: v.union(v.literal("running"), v.literal("done"), v.literal("error")),
-    ts: v.number()
+    ts: v.number(),
+    // Set when the run finishes — lets the ops monitor show real durations
+    endTs: v.optional(v.number())
   }).index("by_ts", ["ts"])
 });

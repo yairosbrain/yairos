@@ -32,12 +32,14 @@ export const update = mutation({
     output: v.optional(v.string()),
     status: v.optional(
       v.union(v.literal("running"), v.literal("done"), v.literal("error"))
-    )
+    ),
+    endTs: v.optional(v.number())
   },
   handler: async (ctx, args) => {
     const patch: Record<string, unknown> = {};
     if (args.output !== undefined) patch.output = args.output;
     if (args.status !== undefined) patch.status = args.status;
+    if (args.endTs !== undefined) patch.endTs = args.endTs;
     await ctx.db.patch(args.id, patch);
   }
 });
