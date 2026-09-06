@@ -184,5 +184,19 @@
   "net.limitsFix": "לאלה צריך Kali על חומרה אמיתית, VM או Raspberry Pi. יאירוס יהיה המחברת והלימוד — לא הכלי עצמו.",
   "app.shell": "שֶׁל",
   "cmd.help.startx": "הפעל את כל החלונות ברצף",
-  "cmd.startx": "מפעיל את כל המערכות…"
+  "cmd.startx": "מפעיל את כל המערכות…",
+  "del.title": "מחיקת פרויקט",
+  "del.body": "מחיקת \"{name}\" היא סופית. אין שחזור.",
+  "del.item.convex": "הפרויקט, כל השיחה שלו, ריצות הסוכנים והזיכרון — יימחקו מ-Convex",
+  "del.item.repo": "הריפו {repo} יימחק לצמיתות מ-GitHub",
+  "del.item.pages": "האתר החי ירד מהאוויר (GitHub Pages מוגש מהריפו)",
+  "del.item.noRepo": "אין ריפו מקושר — יש רק מה למחוק מקומית",
+  "del.vercelNote": "הערה: האתרים שיאירוס בונה מתארחים ב-GitHub Pages, לא ב-Vercel. ב-Vercel יושבת אפליקציית יאירוס עצמה, ואותה המחיקה הזו לא נוגעת.",
+  "del.typeName": "הקלד את השם \"{name}\" כדי לאשר:",
+  "del.cancel": "ביטול",
+  "del.confirm": "מחק לצמיתות",
+  "del.deleting": "מוחק…",
+  "del.noToken": "צריך GitHub Token בהגדרות כדי למחוק את הריפו.",
+  "del.scope": "לטוקן אין הרשאת delete_repo. צור טוקן חדש עם ההרשאה הזו (classic: delete_repo · fine-grained: Administration ← Read and write) ונסה שוב. שום דבר לא נמחק.",
+  "del.repoFailed": "מחיקת הריפו נכשלה: {detail}. שום דבר לא נמחק."
 }

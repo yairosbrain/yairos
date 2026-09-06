@@ -27,6 +27,8 @@ export interface DataApi {
   memories: ConversationMemory[];
   createProject(name: string, request: string): Promise<string>;
   updateProject(id: string, patch: Partial<Omit<Project, "id" | "createdAt">>): Promise<void>;
+  /** Removes the project and its messages, runs and memory. Irreversible. */
+  deleteProject(id: string): Promise<void>;
   addMessage(msg: Omit<ChatMessage, "id" | "ts">): Promise<void>;
   addAgentRun(projectId: string, agent: AgentRun["agent"], input: string): Promise<string>;
   finishAgentRun(id: string, output: string, status: "done" | "error"): Promise<void>;
@@ -76,6 +78,7 @@ function ConvexData({ children }: { children: ReactNode }) {
 
   const createProjectMut = useMutation(anyApi.projects.create);
   const updateProjectMut = useMutation(anyApi.projects.update);
+  const removeProjectMut = useMutation(anyApi.projects.remove);
   const addMessageMut = useMutation(anyApi.messages.add);
   const addRunMut = useMutation(anyApi.agentRuns.add);
   const updateRunMut = useMutation(anyApi.agentRuns.update);
@@ -120,6 +123,12 @@ function ConvexData({ children }: { children: ReactNode }) {
       await updateProjectMut({ id, patch });
     },
     [updateProjectMut]
+  );
+  const deleteProject = useCallback(
+    async (id: string) => {
+      await removeProjectMut({ id });
+    },
+    [removeProjectMut]
   );
   const addMessage = useCallback(
     async (msg: Omit<ChatMessage, "id" | "ts">) => {
@@ -170,6 +179,7 @@ function ConvexData({ children }: { children: ReactNode }) {
       memories,
       createProject,
       updateProject,
+      deleteProject,
       addMessage,
       addAgentRun,
       finishAgentRun,
@@ -182,6 +192,7 @@ function ConvexData({ children }: { children: ReactNode }) {
       memories,
       createProject,
       updateProject,
+      deleteProject,
       addMessage,
       addAgentRun,
       finishAgentRun,
@@ -255,6 +266,29 @@ function LocalData({ children }: { children: ReactNode }) {
     },
     []
   );
+
+  const deleteProject = useCallback(async (id: string) => {
+    setProjects((prev) => {
+      const next = prev.filter((p) => p.id !== id);
+      save("yairos.projects", next);
+      return next;
+    });
+    setMessages((prev) => {
+      const next = prev.filter((m) => m.projectId !== id);
+      save("yairos.messages", next);
+      return next;
+    });
+    setAgentRuns((prev) => {
+      const next = prev.filter((r) => r.projectId !== id);
+      save("yairos.agentRuns", next);
+      return next;
+    });
+    setMemories((prev) => {
+      const next = prev.filter((m) => m.threadId !== id);
+      save("yairos.memories", next);
+      return next;
+    });
+  }, []);
 
   const addMessage = useCallback(async (msg: Omit<ChatMessage, "id" | "ts">) => {
     const m: ChatMessage = { ...msg, id: uid(), ts: Date.now() };
@@ -336,6 +370,7 @@ function LocalData({ children }: { children: ReactNode }) {
       memories,
       createProject,
       updateProject,
+      deleteProject,
       addMessage,
       addAgentRun,
       finishAgentRun,
@@ -348,6 +383,7 @@ function LocalData({ children }: { children: ReactNode }) {
       memories,
       createProject,
       updateProject,
+      deleteProject,
       addMessage,
       addAgentRun,
       finishAgentRun,

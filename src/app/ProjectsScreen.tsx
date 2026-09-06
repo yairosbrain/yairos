@@ -2,9 +2,119 @@ import { useEffect, useRef, useState } from "react";
 import { useData } from "../data/store";
 import { useI18n } from "../i18n";
 import { useOrchestrator } from "../core/orchestrator";
+import { getSettings } from "../data/localSettings";
+import { deleteRepo, parseRepoUrl } from "../deploy/github";
 import AskBar from "./AskBar";
 import { MessageBubble } from "./TranscriptScreen";
 import type { Project } from "../types";
+
+/**
+ * Deleting a project is irreversible and reaches outside the app, so the
+ * dialog states every consequence before the button is live and reports what
+ * actually happened afterwards — including a repo it could not remove.
+ */
+function DeleteDialog({
+  project,
+  onClose,
+  onDeleted
+}: {
+  project: Project;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const { t } = useI18n();
+  const data = useData();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const repo = project.repoUrl ? parseRepoUrl(project.repoUrl) : null;
+  const armed = confirm.trim() === project.name.trim();
+
+  const run = async () => {
+    setBusy(true);
+    setError("");
+    // Remove the repo first: if that fails the project row survives, so the
+    // user still has the link and can retry. The reverse would strand it.
+    if (repo) {
+      const token = getSettings().githubToken.trim();
+      if (!token) {
+        setError(t("del.noToken"));
+        setBusy(false);
+        return;
+      }
+      const res = await deleteRepo(token, repo.owner, repo.repo);
+      if (!res.ok) {
+        setError(
+          res.reason === "scope"
+            ? t("del.scope")
+            : t("del.repoFailed", { detail: res.detail })
+        );
+        setBusy(false);
+        return;
+      }
+    }
+    try {
+      await data.deleteProject(project.id);
+      onDeleted();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="agent-card-backdrop" onClick={onClose}>
+      <div className="agent-card del-card" onClick={(e) => e.stopPropagation()}>
+        <div className="agent-card-head">
+          <h2>{t("del.title")}</h2>
+          <button className="agent-card-close" onClick={onClose} aria-label={t("card.close")}>
+            ✕
+          </button>
+        </div>
+
+        <p className="agent-desc">{t("del.body", { name: project.name })}</p>
+        <ul className="del-list">
+          <li>{t("del.item.convex")}</li>
+          {repo ? (
+            <li className="danger">
+              {t("del.item.repo", { repo: `${repo.owner}/${repo.repo}` })}
+            </li>
+          ) : (
+            <li className="muted">{t("del.item.noRepo")}</li>
+          )}
+          {project.liveUrl && <li className="danger">{t("del.item.pages")}</li>}
+        </ul>
+        <p className="del-note">{t("del.vercelNote")}</p>
+
+        <label className="del-confirm-label">
+          {t("del.typeName", { name: project.name })}
+        </label>
+        <input
+          className="del-confirm"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          placeholder={project.name}
+          autoFocus
+        />
+
+        {error && <div className="test-fail">{error}</div>}
+
+        <div className="pkg-actions">
+          <button onClick={onClose} disabled={busy}>
+            {t("del.cancel")}
+          </button>
+          <button
+            className="del-go"
+            onClick={() => void run()}
+            disabled={!armed || busy}
+          >
+            {busy ? t("del.deleting") : t("del.confirm")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // The project hub: every site Yairos built, its live URL, and a dedicated
 // chat per project that remembers that project's whole story.
@@ -56,6 +166,7 @@ export default function ProjectsScreen() {
   const { t, lang } = useI18n();
   const data = useData();
   const [openId, setOpenId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<Project | null>(null);
 
   const projects = [...data.projects].sort((a, b) => b.createdAt - a.createdAt);
   const open = projects.find((p) => p.id === openId) ?? null;
@@ -63,8 +174,21 @@ export default function ProjectsScreen() {
 
   return (
     <div className="screen projects">
-      <h2>{t("projects.title")}</h2>
+      <h2>
+        {t("projects.title")}
+        <span className="projects-count">{projects.length}</span>
+      </h2>
       {projects.length === 0 && <div className="empty">{t("projects.empty")}</div>}
+      {deleting && (
+        <DeleteDialog
+          project={deleting}
+          onClose={() => setDeleting(null)}
+          onDeleted={() => {
+            setDeleting(null);
+            setOpenId(null);
+          }}
+        />
+      )}
       <div className="project-list">
         {projects.map((p) => (
           <div
@@ -112,6 +236,17 @@ export default function ProjectsScreen() {
                 </a>
               )}
               <span className="project-chat-cta">💬 {t("projects.chat")}</span>
+              <button
+                className="project-del"
+                title={t("del.title")}
+                aria-label={t("del.title")}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleting(p);
+                }}
+              >
+                🗑
+              </button>
             </div>
           </div>
         ))}

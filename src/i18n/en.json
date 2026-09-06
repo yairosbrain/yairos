@@ -184,5 +184,19 @@
   "net.limitsFix": "Those need Kali on real hardware, a VM or a Raspberry Pi. Yairos is the notebook and the lessons — not the tool itself.",
   "app.shell": "Shell",
   "cmd.help.startx": "bring up every window in sequence",
-  "cmd.startx": "bringing up all systems…"
+  "cmd.startx": "bringing up all systems…",
+  "del.title": "Delete project",
+  "del.body": "Deleting \"{name}\" is permanent. There is no undo.",
+  "del.item.convex": "The project, its whole chat, agent runs and memory — removed from Convex",
+  "del.item.repo": "The repository {repo} is permanently deleted from GitHub",
+  "del.item.pages": "The live site goes offline (GitHub Pages is served from the repo)",
+  "del.item.noRepo": "No repository linked — only local data to remove",
+  "del.vercelNote": "Note: sites Yairos builds are hosted on GitHub Pages, not Vercel. Vercel hosts the Yairos app itself, which this delete does not touch.",
+  "del.typeName": "Type the name \"{name}\" to confirm:",
+  "del.cancel": "Cancel",
+  "del.confirm": "Delete permanently",
+  "del.deleting": "Deleting…",
+  "del.noToken": "A GitHub token is required in settings to delete the repository.",
+  "del.scope": "The token lacks delete_repo. Create a new token with it (classic: delete_repo · fine-grained: Administration -> Read and write) and retry. Nothing was deleted.",
+  "del.repoFailed": "Repository delete failed: {detail}. Nothing was deleted."
 }

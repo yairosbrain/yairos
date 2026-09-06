@@ -253,12 +253,20 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
 
   const clearConsole = useCallback(() => setConsoleLines([]), []);
 
-  /** Open the standard multi-window layout in one command */
+  /**
+   * The standard multi-window layout. A phone shows one window at a time, so
+   * opening a wall of them there just buries the dock — it gets the terminal
+   * and nothing else.
+   */
   const dash = useCallback(() => {
+    if (isMobile) {
+      open("term");
+      return;
+    }
     DASH_APPS.forEach((a) => open(a));
     // Let the opens commit before measuring the desktop for the grid
     setTimeout(() => tile(), 0);
-  }, [open, tile]);
+  }, [open, tile, isMobile]);
 
   /**
    * The full cold start: every built app comes up one after another, then the
@@ -266,6 +274,12 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
    * than everything blinking into place at once.
    */
   const startx = useCallback(() => {
+    // Same reasoning as dash: on a phone a full cold start is nine windows
+    // you cannot see at once, so bring up the shell and stop there.
+    if (isMobile) {
+      open("shell");
+      return;
+    }
     const ready = APPS.filter((a) => a.ready);
     ready.forEach((a, i) => {
       setTimeout(() => {
@@ -273,7 +287,7 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
         if (i === ready.length - 1) setTimeout(() => tile(), 160);
       }, i * 260);
     });
-  }, [open, tile]);
+  }, [open, tile, isMobile]);
 
   const appList = useCallback(
     () => APPS.map((a) => ({ command: a.command, ready: a.ready })),

@@ -226,3 +226,49 @@ export function parseRepoUrl(
   const m = repoUrl.match(/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/);
   return m ? { owner: m[1], repo: m[2] } : null;
 }
+
+export type RepoDeleteOutcome =
+  | { ok: true; alreadyGone?: boolean }
+  | { ok: false; reason: "scope" | "auth" | "other"; detail: string };
+
+/**
+ * Permanently delete a repository — this also takes its GitHub Pages site
+ * offline, since Pages is served from the repo. There is no undo.
+ *
+ * Needs a token carrying `delete_repo` (classic) or Administration:write
+ * (fine-grained). GitHub answers 403 when the scope is missing, which is worth
+ * distinguishing: the fix is a new token, not a retry.
+ */
+export async function deleteRepo(
+  token: string,
+  owner: string,
+  repo: string
+): Promise<RepoDeleteOutcome> {
+  let res: Response;
+  try {
+    res = await gh(token, "DELETE", `/repos/${owner}/${repo}`);
+  } catch (e) {
+    return { ok: false, reason: "other", detail: e instanceof Error ? e.message : String(e) };
+  }
+
+  if (res.status === 204) return { ok: true };
+  // Already deleted elsewhere — the end state the caller wanted is satisfied
+  if (res.status === 404) return { ok: true, alreadyGone: true };
+  if (res.status === 403) {
+    return {
+      ok: false,
+      reason: "scope",
+      detail: "token lacks delete_repo / Administration:write"
+    };
+  }
+  if (res.status === 401) return { ok: false, reason: "auth", detail: "bad token" };
+
+  let detail = `HTTP ${res.status}`;
+  try {
+    const body = (await res.json()) as { message?: string };
+    if (body.message) detail = body.message;
+  } catch {
+    /* non-JSON error body — the status is enough */
+  }
+  return { ok: false, reason: "other", detail };
+}
