@@ -29,7 +29,13 @@ import {
   interrogatorPrompt,
   qaPrompt,
   summarizerPrompt,
-  updateCoderPrompt
+  updateCoderPrompt,
+  researcherPrompt,
+  copywriterPrompt,
+  seoPrompt,
+  a11yPrompt,
+  perfPrompt,
+  securityPrompt
 } from "../agents/prompts";
 import { apisToPromptBlock, findCandidateApis } from "../agents/apiCatalog";
 import { useData, type DataApi } from "../data/store";
@@ -44,7 +50,26 @@ import {
 } from "../deploy/github";
 import { ensureNotifyPermission, notifyDone, notifyStage } from "../notify/notifications";
 import { startBuildWakeLock, stopBuildWakeLock } from "../notify/wakeLock";
-import type { AgentId, AgentRun, ChatMessage, Lang, Project, SiteFile } from "../types";
+import {
+  POST_CODE_CREW,
+  PRE_CODE_CREW,
+  type AgentId,
+  type AgentRun,
+  type ChatMessage,
+  type Lang,
+  type Project,
+  type SiteFile
+} from "../types";
+
+/** System prompt for each optional specialist, by id */
+const CREW_PROMPTS: Record<string, (lang: Lang) => string> = {
+  researcher: researcherPrompt,
+  copywriter: copywriterPrompt,
+  seo: () => seoPrompt(),
+  a11y: () => a11yPrompt(),
+  perf: () => perfPrompt(),
+  security: () => securityPrompt()
+};
 
 interface OrchestratorApi {
   busy: boolean;
@@ -317,6 +342,37 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
         // Connector failed — build without live integrations rather than blocking
       }
 
+      // PRE-CODE specialists — each produces text the coder then works from.
+      // Only the ones enabled on this device run, so the default build costs
+      // exactly what it did before.
+      const enabled = getSettings().crew ?? [];
+      let groundwork = "";
+      for (const id of PRE_CODE_CREW) {
+        if (!enabled.includes(id)) continue;
+        await agentNote(id, tRef.current(`run.${id}`), project.id);
+        try {
+          const out = await runStep(
+            project.id,
+            id,
+            project.spec.slice(0, 3000),
+            () =>
+              askBrain([
+                { role: "system", content: CREW_PROMPTS[id](langRef.current) },
+                {
+                  role: "user",
+                  content:
+                    `Project name: ${project.name}\n\nSpecification:\n${project.spec}` +
+                    (groundwork ? `\n\nEarlier groundwork:\n${groundwork}` : "")
+                }
+              ]),
+            (r) => r
+          );
+          groundwork += `\n\n===== ${id.toUpperCase()} =====\n${out}`;
+        } catch {
+          // A specialist failing must never sink the build — carry on without it
+        }
+      }
+
       await agentNote("coder", tRef.current("run.coder"), project.id);
       const coded = await runStep(
         project.id,
@@ -329,6 +385,9 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
               role: "user",
               content:
                 `Project name: ${project.name}\nOriginal request: ${project.request}\n\nSpecification:\n${project.spec}` +
+                (groundwork
+                  ? `\n\nGROUNDWORK from the specialist departments — use these facts and use this copy VERBATIM rather than writing your own:${groundwork}`
+                  : "") +
                 (apiPlan
                   ? `\n\nREAL API INTEGRATIONS — the CONNECTOR department verified these real data sources. Implement them exactly as instructed (fetch from the browser, handle loading/empty/error states). Never present fabricated data as real:\n${apiPlan}`
                   : "")
@@ -371,6 +430,43 @@ export function OrchestratorProvider({ children }: { children: ReactNode }) {
       } catch {
         // QA failed — ship the coder's files rather than blocking the pipeline
       }
+
+      // POST-CODE specialists — each takes the whole file set and hands back a
+      // corrected one. A pass that fails or returns junk is simply skipped, so
+      // the worst case is the site QA already approved.
+      for (const id of POST_CODE_CREW) {
+        if (!enabled.includes(id)) continue;
+        await agentNote(id, tRef.current(`run.${id}`), project.id);
+        try {
+          const pass = await runStep(
+            project.id,
+            id,
+            files.map((f) => f.path).join(", "),
+            () =>
+              askBrainJson<{ files: SiteFile[] }>([
+                { role: "system", content: CREW_PROMPTS[id](langRef.current) },
+                {
+                  role: "user",
+                  content:
+                    filesToPromptBlock(files) +
+                    (apiPlan && id === "security"
+                      ? `\n\n===== APPROVED API ENDPOINTS (do not rewrite these) =====\n${apiPlan}`
+                      : "")
+                }
+              ]),
+            (r) => r.files.map((f) => f.path).join(", ")
+          );
+          const next = (pass.files ?? []).filter(
+            (f) => f.path && typeof f.content === "string"
+          );
+          if (next.length && next.some((f) => f.path === "index.html")) {
+            files = next;
+          }
+        } catch {
+          // Keep the last known-good file set and move to the next specialist
+        }
+      }
+
       return files;
     },
     [agentNote, runStep]

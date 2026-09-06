@@ -71,7 +71,7 @@ export const APPS: AppDef[] = [
     titleKey: "app.brain",
     icon: "◉",
     size: { w: 640, h: 520 },
-    ready: false
+    ready: true
   },
   {
     id: "globe",
@@ -79,7 +79,7 @@ export const APPS: AppDef[] = [
     titleKey: "app.globe",
     icon: "◍",
     size: { w: 680, h: 520 },
-    ready: false
+    ready: true
   },
   {
     id: "net",
@@ -87,7 +87,7 @@ export const APPS: AppDef[] = [
     titleKey: "app.net",
     icon: "⇅",
     size: { w: 600, h: 440 },
-    ready: false
+    ready: true
   }
 ];
 

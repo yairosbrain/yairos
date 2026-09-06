@@ -13,6 +13,7 @@ export type ProjectStatus =
   | "error";
 
 export type AgentId =
+  // Core pipeline — always runs
   | "core"
   | "interrogator"
   | "architect"
@@ -20,7 +21,19 @@ export type AgentId =
   | "connector"
   | "coder"
   | "qa"
-  | "deployer";
+  | "deployer"
+  // Optional specialists — opt in per device via settings / the `crew` command
+  | "researcher"
+  | "copywriter"
+  | "seo"
+  | "a11y"
+  | "perf"
+  | "security";
+
+/** Specialists that feed text into the coder, before any code is written */
+export const PRE_CODE_CREW = ["researcher", "copywriter"] as const;
+/** Specialists that receive the finished files and hand back a corrected set */
+export const POST_CODE_CREW = ["seo", "a11y", "perf", "security"] as const;
 
 export interface Project {
   id: string;
@@ -82,6 +95,8 @@ export interface DeviceSettings {
   githubToken: string;
   githubOwner: string;
   puterModel: string;
+  /** Optional specialist departments enabled on this device */
+  crew: AgentId[];
 }
 
 export interface SiteFile {

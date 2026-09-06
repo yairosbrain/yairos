@@ -4,6 +4,9 @@ import TranscriptScreen from "./app/TranscriptScreen";
 import ProjectsScreen from "./app/ProjectsScreen";
 import SettingsScreen from "./app/SettingsScreen";
 import OpsScreen from "./app/OpsScreen";
+import BrainScreen from "./app/BrainScreen";
+import GlobeScreen from "./app/GlobeScreen";
+import NetScreen from "./app/NetScreen";
 import AgentCard from "./app/AgentCard";
 import AskBar from "./app/AskBar";
 import GalaxyScene from "./galaxy/GalaxyScene";
@@ -47,6 +50,12 @@ function WindowBody({ app }: { app: AppId }) {
       return <ProjectsScreen />;
     case "settings":
       return <SettingsScreen />;
+    case "brain":
+      return <BrainScreen />;
+    case "globe":
+      return <GlobeScreen />;
+    case "net":
+      return <NetScreen />;
     default:
       return null;
   }

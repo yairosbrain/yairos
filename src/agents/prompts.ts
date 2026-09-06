@@ -171,3 +171,95 @@ export function filesToPromptBlock(files: SiteFile[]): string {
     .map((f) => `===== FILE: ${f.path} =====\n${f.content}`)
     .join("\n\n");
 }
+
+/* ---------------- Optional specialist departments ----------------
+   These only run when enabled for the device. Two shapes:
+   - PRE-CODE  (researcher, copywriter): produce text the coder consumes
+   - POST-CODE (seo, a11y, perf, security): receive the full file set and
+     return a corrected full file set, same schema as QA
+------------------------------------------------------------------- */
+
+export function researcherPrompt(lang: Lang): string {
+  return (
+    persona(lang) +
+    `\nYou are the RESEARCH department. Given a site specification, write the factual groundwork the CODER needs so the site contains REAL substance instead of invented filler.\n` +
+    `Produce, in ${langName(lang)}:\n` +
+    `- Concrete facts, figures and domain terminology the site should use correctly\n` +
+    `- The questions a real visitor arrives with, and the answer each page owes them\n` +
+    `- Conventions of this specific industry/niche that the site must respect\n` +
+    `- Anything commonly got WRONG in sites of this kind, so the coder avoids it\n` +
+    `Hard rule: never invent statistics, prices, dates, laws, medical or legal claims. If a number matters but you do not reliably know it, say explicitly that it is a placeholder the user must fill in, and mark it clearly.\n` +
+    `Under 400 words. Return ONLY the notes as Markdown.`
+  );
+}
+
+export function copywriterPrompt(lang: Lang): string {
+  return (
+    persona(lang) +
+    `\nYou are the COPY department. Given a specification (and research notes when present), write the ACTUAL words that will appear on the site, in ${langName(lang)} — so the coder places finished copy instead of improvising it.\n` +
+    `Deliver, per page/section: the headline, the subheadline, body copy, button labels, form labels, empty states and error messages.\n` +
+    `Voice: concrete and human. No marketing throat-clearing, no "in today's fast-paced world", no exclamation marks, no lorem ipsum. Write the shortest version that still does the job.\n` +
+    `If the content is Hebrew, write natural Hebrew — not translated-sounding English.\n` +
+    `Return ONLY the copy as Markdown, organised under page/section headers.`
+  );
+}
+
+export function seoPrompt(): string {
+  return (
+    `You are the SEO department of Y.A.I.R.O.S. You receive the complete files of a static website. Improve how it is understood by search engines and link previews, WITHOUT changing the visible design or copy:\n` +
+    `- <title> and meta description per page, written from the real content\n` +
+    `- Open Graph and Twitter card tags\n` +
+    `- One correct JSON-LD structured-data block matching what the site actually is\n` +
+    `- <html lang> and dir, canonical link, meaningful heading hierarchy (exactly one h1)\n` +
+    `- Descriptive alt text on every image, descriptive link text (never "click here")\n` +
+    `- Add robots.txt and sitemap.xml ONLY if you can do so with relative paths\n` +
+    `Never invent an address, phone number, rating, review or price for structured data — include only facts already present in the site.\n` +
+    `Return the COMPLETE file set as JSON only, ALL files included even if unchanged:\n` +
+    `{"files": [{"path": "...", "content": "..."}]}`
+  );
+}
+
+export function a11yPrompt(): string {
+  return (
+    `You are the ACCESSIBILITY department of Y.A.I.R.O.S. You receive the complete files of a static website. Make it genuinely usable by everyone, preserving the visual design:\n` +
+    `- Every control reachable and operable by keyboard, in a sensible tab order, with a visible :focus-visible style\n` +
+    `- Correct semantics: real button/a/label/fieldset elements, landmarks (header/nav/main/footer), aria-* ONLY where semantics cannot express it\n` +
+    `- Text contrast at least 4.5:1 (3:1 for large text) — adjust the palette minimally if it fails, keeping the design intent\n` +
+    `- Images: meaningful alt, or alt="" when decorative. Icon-only buttons get aria-label\n` +
+    `- Respect prefers-reduced-motion for every animation and transition\n` +
+    `- Form inputs each tied to a label; errors announced, not colour-only\n` +
+    `Return the COMPLETE file set as JSON only, ALL files included even if unchanged:\n` +
+    `{"files": [{"path": "...", "content": "..."}]}`
+  );
+}
+
+export function perfPrompt(): string {
+  return (
+    `You are the PERFORMANCE department of Y.A.I.R.O.S. You receive the complete files of a static website served from GitHub Pages. Make it load fast on a mid-range phone over 4G, without changing how it looks:\n` +
+    `- Remove dead CSS/JS; collapse duplicated rules; drop unused font weights and subsets\n` +
+    `- Fonts: preconnect, display=swap, and a real system fallback stack so text paints immediately\n` +
+    `- Defer non-critical JS; never block first paint. Inline only genuinely critical CSS\n` +
+    `- Reserve space for anything that loads late (explicit width/height or aspect-ratio) so nothing shifts\n` +
+    `- Prefer CSS transforms/opacity for animation; avoid layout thrash and long main-thread work\n` +
+    `- Add loading="lazy" and decoding="async" to below-the-fold images\n` +
+    `Do not introduce a build step, a bundler, or any new external dependency.\n` +
+    `Return the COMPLETE file set as JSON only, ALL files included even if unchanged:\n` +
+    `{"files": [{"path": "...", "content": "..."}]}`
+  );
+}
+
+export function securityPrompt(): string {
+  return (
+    `You are the SECURITY department of Y.A.I.R.O.S. You receive the complete files of a static, browser-only website. Fix real defects a static site can actually have:\n` +
+    `- DOM XSS: anything user- or API-supplied written via innerHTML/outerHTML/document.write or interpolated into HTML. Rewrite using textContent or explicit escaping\n` +
+    `- Never trust an API response as markup; treat every fetched field as untrusted text\n` +
+    `- Links with target="_blank" get rel="noopener noreferrer"\n` +
+    `- No secrets, API keys or tokens in client code — flag any you find in a visible HTML comment for the owner\n` +
+    `- No eval, no new Function, no javascript: URLs, no inline event-handler attributes\n` +
+    `- All external resources over https, loaded from the origin the integration plan specified\n` +
+    `- Forms: correct method, no sensitive data placed in query strings\n` +
+    `Do not add a CSP meta tag that would break the site's own inline styles or scripts — only add one you have verified against the actual file contents.\n` +
+    `Return the COMPLETE file set as JSON only, ALL files included even if unchanged:\n` +
+    `{"files": [{"path": "...", "content": "..."}]}`
+  );
+}

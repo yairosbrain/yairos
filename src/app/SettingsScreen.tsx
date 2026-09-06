@@ -4,6 +4,7 @@ import { useI18n } from "../i18n";
 import { useData } from "../data/store";
 import { askBrain } from "../brain";
 import { downloadLogo, logoDataUrl } from "./logo";
+import { OPTIONAL_AGENTS } from "../agents/registry";
 import type { BrainProviderId, DeviceSettings } from "../types";
 
 export default function SettingsScreen() {
@@ -126,6 +127,36 @@ export default function SettingsScreen() {
             {testState}
           </div>
         )}
+      </section>
+
+      <section>
+        <label className="field-label">{t("settings.crew")}</label>
+        <p className="help">{t("settings.crew.help")}</p>
+        <div className="crew-grid">
+          {OPTIONAL_AGENTS.map((a) => {
+            const on = (s.crew ?? []).includes(a.id);
+            return (
+              <label key={a.id} className={`crew-item ${on ? "on" : ""}`}>
+                <input
+                  type="checkbox"
+                  checked={on}
+                  onChange={(e) =>
+                    update({
+                      crew: e.target.checked
+                        ? [...(s.crew ?? []), a.id]
+                        : (s.crew ?? []).filter((c) => c !== a.id)
+                    })
+                  }
+                />
+                <span className="crew-dot" style={{ background: a.color }} />
+                <span className="crew-body">
+                  <span className="crew-name">{t(`agent.${a.id}`)}</span>
+                  <span className="crew-desc">{t(`agent.${a.id}.desc`)}</span>
+                </span>
+              </label>
+            );
+          })}
+        </div>
       </section>
 
       <section>

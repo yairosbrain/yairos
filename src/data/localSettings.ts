@@ -12,7 +12,10 @@ const defaults: DeviceSettings = {
   claudeKey: "",
   githubToken: "",
   githubOwner: "yairosbrain",
-  puterModel: "claude-sonnet-5"
+  puterModel: "claude-sonnet-5",
+  // Empty by default: extra departments cost extra brain calls, so the
+  // user opts in per device rather than paying for them silently.
+  crew: []
 };
 
 // Old defaults that upstream providers have since retired → auto-upgrade
@@ -26,6 +29,8 @@ export function getSettings(): DeviceSettings {
     if (RETIRED_PUTER_MODELS.includes(s.puterModel)) {
       s.puterModel = defaults.puterModel;
     }
+    // Settings saved before the crew existed have no array at all
+    if (!Array.isArray(s.crew)) s.crew = [];
     return s;
   } catch {
     return { ...defaults };
