@@ -4,10 +4,11 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode
 } from "react";
-import { appById, DASH_APPS, type AppId } from "./apps";
+import { APPS, appById, DASH_APPS, type AppId } from "./apps";
 
 // The window manager. Desktop gets real floating windows; phones get a
 // single full-screen window at a time with the dock as the switcher —
@@ -42,6 +43,8 @@ export interface WmApi {
   resize(id: string, w: number, h: number): void;
   tile(): void;
   dash(): void;
+  startx(): void;
+  appList(): { command: string; ready: boolean }[];
   echo(...lines: string[]): void;
   clearConsole(): void;
 }
@@ -95,6 +98,13 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
   );
   const [consoleLines, setConsoleLines] = useState<string[]>([]);
 
+  // Focus has to be decided OUTSIDE the setWindows updater. Updaters must stay
+  // pure: React invokes them twice in StrictMode, so an id minted inside one
+  // would differ from the id that actually landed in state, and focusedId would
+  // point at a window that never existed.
+  const windowsRef = useRef<WinState[]>(windows);
+  windowsRef.current = windows;
+
   // Remember the session's layout, so a reload lands you back where you were
   useEffect(() => {
     try {
@@ -127,64 +137,59 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
 
   const open = useCallback(
     (app: AppId) => {
-      setWindows((prev) => {
-        // One instance per app — reopening just focuses and unminimises it
-        const existing = prev.find((w) => w.app === app);
-        if (existing) {
-          const max = topZ(prev);
-          setFocusedId(existing.id);
-          return prev.map((w) =>
-            w.id === existing.id
-              ? { ...w, z: max + 1, minimized: false }
-              : w
-          );
-        }
-        const def = appById(app);
-        const id = uid();
-        // Cascade new windows so they never land exactly on top of each other
-        const step = prev.length % 6;
-        const win: WinState = {
-          id,
-          app,
-          x: 40 + step * 26,
-          y: 30 + step * 22,
-          w: def.size.w,
-          h: def.size.h,
-          z: topZ(prev) + 1,
-          minimized: false,
-          maximized: false
-        };
-        setFocusedId(id);
-        return [...prev, win];
-      });
+      const prev = windowsRef.current;
+      const max = topZ(prev);
+
+      // One instance per app — reopening just focuses and unminimises it
+      const existing = prev.find((w) => w.app === app);
+      if (existing) {
+        setWindows((list) =>
+          list.map((w) =>
+            w.id === existing.id ? { ...w, z: max + 1, minimized: false } : w
+          )
+        );
+        setFocusedId(existing.id);
+        return;
+      }
+
+      const def = appById(app);
+      const id = uid();
+      // Cascade new windows so they never land exactly on top of each other
+      const step = prev.length % 6;
+      const win: WinState = {
+        id,
+        app,
+        x: 40 + step * 26,
+        y: 30 + step * 22,
+        w: def.size.w,
+        h: def.size.h,
+        z: max + 1,
+        minimized: false,
+        maximized: false
+      };
+      // Append against the freshest list, so rapid opens (startx) don't drop one
+      setWindows((list) =>
+        list.some((w) => w.app === app) ? list : [...list, win]
+      );
+      setFocusedId(id);
     },
     [topZ]
   );
 
   const close = useCallback((id: string) => {
-    setWindows((prev) => {
-      const next = prev.filter((w) => w.id !== id);
-      setFocusedId((cur) =>
-        cur === id ? (next.length ? next[next.length - 1].id : null) : cur
-      );
-      return next;
-    });
+    const next = windowsRef.current.filter((w) => w.id !== id);
+    setWindows(next);
+    setFocusedId((cur) =>
+      cur === id ? (next.length ? next[next.length - 1].id : null) : cur
+    );
   }, []);
 
   const closeApp = useCallback((app: AppId) => {
-    let found = false;
-    setWindows((prev) => {
-      const target = prev.find((w) => w.app === app);
-      if (!target) return prev;
-      found = true;
-      const next = prev.filter((w) => w.id !== target.id);
-      setFocusedId((cur) =>
-        cur === target.id ? (next.length ? next[next.length - 1].id : null) : cur
-      );
-      return next;
-    });
-    return found;
-  }, []);
+    const target = windowsRef.current.find((w) => w.app === app);
+    if (!target) return false;
+    close(target.id);
+    return true;
+  }, [close]);
 
   const closeAll = useCallback(() => {
     setWindows([]);
@@ -255,6 +260,26 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
     setTimeout(() => tile(), 0);
   }, [open, tile]);
 
+  /**
+   * The full cold start: every built app comes up one after another, then the
+   * whole desktop tiles. Staggered so it reads as a machine booting rather
+   * than everything blinking into place at once.
+   */
+  const startx = useCallback(() => {
+    const ready = APPS.filter((a) => a.ready);
+    ready.forEach((a, i) => {
+      setTimeout(() => {
+        open(a.id);
+        if (i === ready.length - 1) setTimeout(() => tile(), 160);
+      }, i * 260);
+    });
+  }, [open, tile]);
+
+  const appList = useCallback(
+    () => APPS.map((a) => ({ command: a.command, ready: a.ready })),
+    []
+  );
+
   const value = useMemo<WmApi>(
     () => ({
       windows,
@@ -272,6 +297,8 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       resize,
       tile,
       dash,
+      startx,
+      appList,
       echo,
       clearConsole
     }),
@@ -291,6 +318,8 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       resize,
       tile,
       dash,
+      startx,
+      appList,
       echo,
       clearConsole
     ]

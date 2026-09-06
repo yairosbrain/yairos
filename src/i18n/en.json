@@ -181,5 +181,8 @@
   "net.limit.monitor": "Monitor mode or packet capture from a network adapter",
   "net.limit.arp": "Reading the ARP table, neighbours or routing entries",
   "net.limit.switch": "Configuring a switch/VLAN or reaching a management interface",
-  "net.limitsFix": "Those need Kali on real hardware, a VM or a Raspberry Pi. Yairos is the notebook and the lessons — not the tool itself."
+  "net.limitsFix": "Those need Kali on real hardware, a VM or a Raspberry Pi. Yairos is the notebook and the lessons — not the tool itself.",
+  "app.shell": "Shell",
+  "cmd.help.startx": "bring up every window in sequence",
+  "cmd.startx": "bringing up all systems…"
 }

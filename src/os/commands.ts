@@ -17,6 +17,7 @@ const HELP: [string, string][] = [
   ["open <app>", "cmd.help.open"],
   ["close <app>", "cmd.help.close"],
   ["dash", "cmd.help.dash"],
+  ["startx", "cmd.help.startx"],
   ["tile", "cmd.help.tile"],
   ["clear", "cmd.help.clear"],
   ["apps", "cmd.help.apps"]
@@ -103,6 +104,13 @@ export function runCommand(
     case "dash": {
       echoCmd();
       wm.dash();
+      return { handled: true };
+    }
+
+    case "startx": {
+      echoCmd();
+      wm.echo(`  ${t("cmd.startx")}`);
+      wm.startx();
       return { handled: true };
     }
 

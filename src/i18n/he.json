@@ -181,5 +181,8 @@
   "net.limit.monitor": "מצב monitor או לכידת חבילות ממתאם רשת",
   "net.limit.arp": "קריאת טבלת ARP, שכנים או מסלולי ניתוב",
   "net.limit.switch": "הגדרת switch/VLAN או גישה לממשק ניהול",
-  "net.limitsFix": "לאלה צריך Kali על חומרה אמיתית, VM או Raspberry Pi. יאירוס יהיה המחברת והלימוד — לא הכלי עצמו."
+  "net.limitsFix": "לאלה צריך Kali על חומרה אמיתית, VM או Raspberry Pi. יאירוס יהיה המחברת והלימוד — לא הכלי עצמו.",
+  "app.shell": "שֶׁל",
+  "cmd.help.startx": "הפעל את כל החלונות ברצף",
+  "cmd.startx": "מפעיל את כל המערכות…"
 }

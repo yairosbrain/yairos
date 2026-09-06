@@ -2,6 +2,7 @@
 // Adding a new department screen = one entry here + one case in <WindowBody>.
 
 export type AppId =
+  | "shell"
   | "term"
   | "galaxy"
   | "projects"
@@ -25,6 +26,14 @@ export interface AppDef {
 }
 
 export const APPS: AppDef[] = [
+  {
+    id: "shell",
+    command: "shell",
+    titleKey: "app.shell",
+    icon: "⌘",
+    size: { w: 660, h: 480 },
+    ready: true
+  },
   {
     id: "term",
     command: "term",
@@ -101,4 +110,4 @@ export function appByCommand(cmd: string): AppDef | undefined {
 }
 
 /** Windows opened by `dash` — the "several screens at once" layout */
-export const DASH_APPS: AppId[] = ["term", "ops", "galaxy"];
+export const DASH_APPS: AppId[] = ["shell", "term", "ops"];

@@ -4,6 +4,7 @@ import TranscriptScreen from "./app/TranscriptScreen";
 import ProjectsScreen from "./app/ProjectsScreen";
 import SettingsScreen from "./app/SettingsScreen";
 import OpsScreen from "./app/OpsScreen";
+import ShellScreen from "./app/ShellScreen";
 import BrainScreen from "./app/BrainScreen";
 import GlobeScreen from "./app/GlobeScreen";
 import NetScreen from "./app/NetScreen";
@@ -40,6 +41,8 @@ function GalaxyApp() {
 
 function WindowBody({ app }: { app: AppId }) {
   switch (app) {
+    case "shell":
+      return <ShellScreen />;
     case "term":
       return <TranscriptScreen />;
     case "galaxy":
