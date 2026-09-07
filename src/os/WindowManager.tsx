@@ -45,6 +45,10 @@ export interface WmApi {
   dash(): void;
   startx(): void;
   appList(): { command: string; ready: boolean }[];
+  /** Open the Projects window and ask it to jump straight into one project's chat */
+  openProjectChat(id: string): void;
+  /** Projects window calls this once to read & clear a pending jump */
+  consumeProjectChat(): string | null;
   echo(...lines: string[]): void;
   clearConsole(): void;
 }
@@ -247,6 +251,20 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const pendingChatRef = useRef<string | null>(null);
+  const openProjectChat = useCallback(
+    (id: string) => {
+      pendingChatRef.current = id;
+      open("projects");
+    },
+    [open]
+  );
+  const consumeProjectChat = useCallback(() => {
+    const id = pendingChatRef.current;
+    pendingChatRef.current = null;
+    return id;
+  }, []);
+
   const echo = useCallback((...lines: string[]) => {
     setConsoleLines((prev) => [...prev.slice(-60), ...lines]);
   }, []);
@@ -313,6 +331,8 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       dash,
       startx,
       appList,
+      openProjectChat,
+      consumeProjectChat,
       echo,
       clearConsole
     }),
@@ -334,6 +354,8 @@ export function WindowManagerProvider({ children }: { children: ReactNode }) {
       dash,
       startx,
       appList,
+      openProjectChat,
+      consumeProjectChat,
       echo,
       clearConsole
     ]

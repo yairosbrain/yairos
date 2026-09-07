@@ -47,6 +47,8 @@ export interface Project {
   repoUrl?: string;
   liveUrl?: string;
   packageText?: string;
+  /** Folder it's filed under in the shell's /projects tree ("" = none) */
+  folder?: string;
   createdAt: number;
 }
 

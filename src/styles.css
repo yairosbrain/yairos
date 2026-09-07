@@ -2220,3 +2220,160 @@ button {
     overflow-y: auto;
   }
 }
+
+/* ================= Login gate ================= */
+.lock {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: #000;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 13px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: auto;
+  cursor: text;
+  padding: 8vh 20px;
+}
+
+.lock-inner {
+  width: min(520px, 100%);
+}
+
+.lock-title {
+  margin: 0 0 18px;
+  color: var(--blue);
+  letter-spacing: 0.32em;
+  font-size: clamp(20px, 6vw, 34px);
+  text-shadow: 0 0 24px rgba(59, 158, 255, 0.5);
+}
+
+.lock-pre {
+  margin: 0 0 16px;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.lock-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.lock-label {
+  color: var(--blue-pale);
+  white-space: nowrap;
+}
+
+.lock-user {
+  color: var(--ok);
+  font-weight: 700;
+}
+
+.lock-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text);
+  caret-color: var(--blue);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 0;
+}
+
+.lock-caret {
+  width: 8px;
+  height: 15px;
+  background: var(--blue);
+  animation: blink 1.05s step-end infinite;
+  flex-shrink: 0;
+}
+
+.lock-msg {
+  margin-top: 10px;
+}
+
+.lock-msg.dim {
+  color: var(--text-dim);
+}
+
+.lock-msg.bad {
+  color: var(--error);
+}
+
+.lock-foot {
+  margin-top: 22px;
+  color: var(--text-dim);
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+/* ================= Project folders ================= */
+.proj-folder {
+  margin-bottom: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  background: rgba(8, 13, 22, 0.4);
+}
+
+.proj-folder > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  color: var(--blue-pale);
+  user-select: none;
+}
+
+.proj-folder > summary::-webkit-details-marker {
+  display: none;
+}
+
+.folder-ico {
+  color: var(--blue-dim);
+  transition: transform 0.15s;
+}
+
+.proj-folder[open] > summary .folder-ico {
+  transform: rotate(90deg);
+}
+
+.folder-count {
+  margin-inline-start: auto;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0 7px;
+}
+
+.proj-folder > .project-card {
+  margin: 0 10px 10px;
+}
+
+.proj-folder > summary + .project-card {
+  margin-top: 2px;
+}
+
+.folder-empty {
+  padding: 4px 14px 12px;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.proj-unfiled-label {
+  margin: 14px 4px 8px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}

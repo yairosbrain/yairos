@@ -25,6 +25,7 @@ export default defineSchema({
     repoUrl: v.optional(v.string()),
     liveUrl: v.optional(v.string()),
     packageText: v.optional(v.string()),
+    folder: v.optional(v.string()),
     createdAt: v.number()
   }),
 

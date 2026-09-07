@@ -204,5 +204,7 @@
   "settings.tokenBad": "Token rejected (Bad credentials). It expired, was revoked, or was pasted incompletely. Create a new one and paste it again.",
   "settings.tokenFail": "Check failed: {error}",
   "settings.tokenWrongUser": "This token belongs to {login}, but 'GitHub user' is set to {owner}. Fix one of them or builds will fail.",
-  "settings.tokenMissing": "Missing scopes: {scopes}. Create a new token with them."
+  "settings.tokenMissing": "Missing scopes: {scopes}. Create a new token with them.",
+  "projects.folderEmpty": "Empty — file projects here with mv in the terminal",
+  "projects.unfiled": "Unfiled"
 }

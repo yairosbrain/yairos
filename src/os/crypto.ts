@@ -2,8 +2,15 @@
 // simulated. Passphrases are stretched with PBKDF2-SHA256 and never stored;
 // file contents are sealed with AES-256-GCM, which is authenticated, so a
 // tampered ciphertext fails to decrypt rather than returning garbage.
+//
+// The envelope and every parameter below are mirrored byte-for-byte in
+// scripts/vault.mjs, so a file sealed in the browser opens with Node and
+// vice-versa. Change one, change both.
 
-const PBKDF2_ITERATIONS = 210_000;
+// 600k is the OWASP 2023 floor for PBKDF2-SHA256. Higher is slower on every
+// unlock; this is the point where an offline guess of a strong passphrase is
+// already impractical.
+const PBKDF2_ITERATIONS = 600_000;
 const SALT_BYTES = 16;
 const IV_BYTES = 12; // 96 bits, the size GCM is specified for
 

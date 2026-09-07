@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWm } from "../os/WindowManager";
-import { execute, loadRootPass, newEnv, type ShellEnv, type ShellHost } from "../os/shell";
+import { useData } from "../data/store";
+import { execute, hasCustomPass, newEnv, type ShellEnv, type ShellHost } from "../os/shell";
+import {
+  addFolder,
+  loadFolders,
+  removeFolder,
+  toShellProjects
+} from "../os/projectFs";
 import { loadVfs } from "../os/vfs";
 import { appByCommand } from "../os/apps";
 
@@ -23,11 +30,16 @@ const BANNER = [
 
 export default function ShellScreen() {
   const wm = useWm();
+  const data = useData();
+  const dataRef = useRef(data);
+  dataRef.current = data;
   const [lines, setLines] = useState<Line[]>(
     BANNER.map((t) => ({ id: lineId++, text: t, kind: "out" as const }))
   );
   const [input, setInput] = useState("");
   const [history, setHistory] = useState<string[]>([]);
+  const historyRef = useRef<string[]>([]);
+  historyRef.current = history;
   const histIdx = useRef<number | null>(null);
   const envRef = useRef<ShellEnv>(null!);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -53,6 +65,7 @@ export default function ShellScreen() {
 
   const host: ShellHost = {
     out,
+    history: () => historyRef.current,
     wm: {
       open: (app) => {
         const def = appByCommand(app);
@@ -69,6 +82,23 @@ export default function ShellScreen() {
       startx: () => wm.startx(),
       list: () => wm.windows.map((w) => ({ app: w.app, minimized: w.minimized })),
       apps: () => wm.appList()
+    },
+    projects: {
+      list: () => toShellProjects(dataRef.current.projects),
+      folders: () => loadFolders(),
+      addFolder: (name) => addFolder(name),
+      removeFolder: (name) => {
+        const used = dataRef.current.projects.some(
+          (p) => (p as { folder?: string }).folder === name
+        );
+        return removeFolder(name, !used);
+      },
+      move: (id, folder) => {
+        void dataRef.current.updateProject(id, { folder: folder ?? "" });
+      },
+      openChat: (id) => {
+        wm.openProjectChat(id);
+      }
     }
   };
 
@@ -119,7 +149,7 @@ export default function ShellScreen() {
 
   const env = envRef.current;
   const masked = !!env.pending?.masked;
-  const hasPass = !!loadRootPass();
+  const shippedPass = !hasCustomPass();
 
   return (
     <div
@@ -174,10 +204,10 @@ export default function ShellScreen() {
         />
       </div>
 
-      {!hasPass && (
+      {shippedPass && (
         <div className="shell-tip">
-          no root password set — run <code>passwd</code> to choose one, then{" "}
-          <code>su</code>
+          using the shipped master password · <code>su</code> for root ·{" "}
+          <code>passwd</code> to set your own on this device
         </div>
       )}
     </div>

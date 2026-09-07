@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useData } from "../data/store";
 import { useI18n } from "../i18n";
 import { useOrchestrator } from "../core/orchestrator";
+import { useWm } from "../os/WindowManager";
+import { loadFolders } from "../os/projectFs";
 import { getSettings } from "../data/localSettings";
 import { deleteRepo, parseRepoUrl } from "../deploy/github";
 import AskBar from "./AskBar";
@@ -165,12 +167,88 @@ function ProjectChat({ project, onBack }: { project: Project; onBack: () => void
 export default function ProjectsScreen() {
   const { t, lang } = useI18n();
   const data = useData();
+  const { consumeProjectChat } = useWm();
   const [openId, setOpenId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Project | null>(null);
+
+  // `open project <name>` in the shell lands here
+  useEffect(() => {
+    const id = consumeProjectChat();
+    if (id) setOpenId(id);
+  }, [consumeProjectChat]);
 
   const projects = [...data.projects].sort((a, b) => b.createdAt - a.createdAt);
   const open = projects.find((p) => p.id === openId) ?? null;
   if (open) return <ProjectChat project={open} onBack={() => setOpenId(null)} />;
+
+  // Group by the shell folder: named folders first (from the folder list plus
+  // any a project points at), then everything unfiled.
+  const folderSet = new Set<string>(loadFolders());
+  for (const p of projects) if (p.folder) folderSet.add(p.folder);
+  const folders = [...folderSet].sort();
+  const inFolder = (name: string) => projects.filter((p) => p.folder === name);
+  const unfiled = projects.filter((p) => !p.folder);
+
+  const card = (p: Project) => (
+    <div
+      key={p.id}
+      className="project-card"
+      onClick={() => setOpenId(p.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") setOpenId(p.id);
+      }}
+    >
+      <div className="project-head">
+        <span className="project-name">{p.name}</span>
+        <span className={`status-chip s-${p.status}`}>{t(`status.${p.status}`)}</span>
+      </div>
+      <div className="project-date">
+        {new Date(p.createdAt).toLocaleDateString(lang === "he" ? "he-IL" : "en-US", {
+          day: "numeric",
+          month: "short",
+          year: "numeric"
+        })}
+      </div>
+      {p.liveUrl && (
+        <a
+          className="project-url"
+          href={p.liveUrl}
+          target="_blank"
+          rel="noreferrer"
+          dir="ltr"
+          onClick={(e) => e.stopPropagation()}
+        >
+          🚀 {p.liveUrl.replace(/^https?:\/\//, "")}
+        </a>
+      )}
+      <div className="project-actions">
+        {p.repoUrl && (
+          <a
+            href={p.repoUrl}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {t("live.repo")}
+          </a>
+        )}
+        <span className="project-chat-cta">💬 {t("projects.chat")}</span>
+        <button
+          className="project-del"
+          title={t("del.title")}
+          aria-label={t("del.title")}
+          onClick={(e) => {
+            e.stopPropagation();
+            setDeleting(p);
+          }}
+        >
+          🗑
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="screen projects">
@@ -190,66 +268,27 @@ export default function ProjectsScreen() {
         />
       )}
       <div className="project-list">
-        {projects.map((p) => (
-          <div
-            key={p.id}
-            className="project-card"
-            onClick={() => setOpenId(p.id)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") setOpenId(p.id);
-            }}
-          >
-            <div className="project-head">
-              <span className="project-name">{p.name}</span>
-              <span className={`status-chip s-${p.status}`}>{t(`status.${p.status}`)}</span>
-            </div>
-            <div className="project-date">
-              {new Date(p.createdAt).toLocaleDateString(lang === "he" ? "he-IL" : "en-US", {
-                day: "numeric",
-                month: "short",
-                year: "numeric"
-              })}
-            </div>
-            {p.liveUrl && (
-              <a
-                className="project-url"
-                href={p.liveUrl}
-                target="_blank"
-                rel="noreferrer"
-                dir="ltr"
-                onClick={(e) => e.stopPropagation()}
-              >
-                🚀 {p.liveUrl.replace(/^https?:\/\//, "")}
-              </a>
-            )}
-            <div className="project-actions">
-              {p.repoUrl && (
-                <a
-                  href={p.repoUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {t("live.repo")}
-                </a>
+        {folders.map((name) => {
+          const items = inFolder(name);
+          return (
+            <details key={name} className="proj-folder" open>
+              <summary>
+                <span className="folder-ico" aria-hidden>▸</span>
+                {name}
+                <span className="folder-count">{items.length}</span>
+              </summary>
+              {items.length ? (
+                items.map(card)
+              ) : (
+                <div className="folder-empty">{t("projects.folderEmpty")}</div>
               )}
-              <span className="project-chat-cta">💬 {t("projects.chat")}</span>
-              <button
-                className="project-del"
-                title={t("del.title")}
-                aria-label={t("del.title")}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleting(p);
-                }}
-              >
-                🗑
-              </button>
-            </div>
-          </div>
-        ))}
+            </details>
+          );
+        })}
+        {folders.length > 0 && unfiled.length > 0 && (
+          <div className="proj-unfiled-label">{t("projects.unfiled")}</div>
+        )}
+        {unfiled.map(card)}
       </div>
     </div>
   );

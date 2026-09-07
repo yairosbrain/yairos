@@ -11,3 +11,6 @@ convex/_generated
 .DS_Store
 
 .vercel
+
+# Handoff plaintext — decrypt locally with scripts/vault.mjs, never commit
+YAIROS-HANDOFF.md

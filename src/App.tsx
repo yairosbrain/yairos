@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import BootScreen from "./app/BootScreen";
+import LockScreen from "./app/LockScreen";
 import TranscriptScreen from "./app/TranscriptScreen";
 import ProjectsScreen from "./app/ProjectsScreen";
 import SettingsScreen from "./app/SettingsScreen";
@@ -67,10 +68,18 @@ function WindowBody({ app }: { app: AppId }) {
 export default function App() {
   const { t, lang, setLang } = useI18n();
   const { busy } = useOrchestrator();
-  const { windows, focusedId, isMobile } = useWm();
+  const { windows, focusedId, isMobile, open } = useWm();
   const [booted, setBooted] = useState(false);
+  // Re-locks on every launch/reload — the master pass is never held past login
+  const [unlocked, setUnlocked] = useState(false);
+
+  // The terminal is the first thing up once you're past the lock
+  useEffect(() => {
+    if (unlocked) open("shell");
+  }, [unlocked, open]);
 
   if (!booted) return <BootScreen onDone={() => setBooted(true)} />;
+  if (!unlocked) return <LockScreen onUnlock={() => setUnlocked(true)} />;
 
   // On phones only the focused window is on screen; the dock is the switcher
   const visible = isMobile

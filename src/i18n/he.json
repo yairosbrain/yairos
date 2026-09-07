@@ -204,5 +204,7 @@
   "settings.tokenBad": "הטוקן נדחה (Bad credentials). הוא פג, נשלל, או הודבק חלקית. צור חדש והדבק שוב.",
   "settings.tokenFail": "הבדיקה נכשלה: {error}",
   "settings.tokenWrongUser": "הטוקן שייך ל-{login}, אבל 'משתמש GitHub' מוגדר ל-{owner}. תקן אחד מהם — אחרת הבנייה תיכשל.",
-  "settings.tokenMissing": "חסרות הרשאות: {scopes}. צור טוקן חדש עם ההרשאות האלה."
+  "settings.tokenMissing": "חסרות הרשאות: {scopes}. צור טוקן חדש עם ההרשאות האלה.",
+  "projects.folderEmpty": "התיקייה ריקה — העבר לכאן פרויקטים עם mv בטרמינל",
+  "projects.unfiled": "לא בתיקייה"
 }
