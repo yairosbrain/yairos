@@ -198,11 +198,28 @@ export function loadVfs(): VDir {
     const raw = localStorage.getItem(STORE_KEY);
     if (!raw) return seedTree();
     const parsed = JSON.parse(raw) as VDir;
-    if (parsed && parsed.type === "dir") return parsed;
+    if (parsed && parsed.type === "dir") return migrate(parsed);
   } catch {
     /* corrupt store — fall through to a clean tree */
   }
   return seedTree();
+}
+
+/**
+ * Fold in files the seed has gained since this tree was first saved, without
+ * disturbing anything the user made. Right now: the /root command reference,
+ * always refreshed so it tracks new commands.
+ */
+function migrate(root: VDir): VDir {
+  const rootDir = root.children.root;
+  if (rootDir && rootDir.type === "dir") {
+    rootDir.children["commands.md"] = file(renderCommandsDoc(), { root: true });
+    if (!rootDir.children["README"]) {
+      const seed = seedTree().children.root as VDir;
+      rootDir.children["README"] = seed.children["README"];
+    }
+  }
+  return root;
 }
 
 export function saveVfs(root: VDir): void {
