@@ -245,14 +245,16 @@ function parsePipeline(line: string): Stage[] {
 
 const PROJ_ROOT = "/projects";
 
-/** Exact slug, then slug prefix, then a substring of the name */
+/** Exact slug, then slug prefix, then a substring of name / live URL / repo */
 function findProject(host: ShellHost, query: string): ShellProject | undefined {
   const items = host.projects.list();
   const q = query.toLowerCase();
+  const hay = (p: ShellProject) =>
+    `${p.name} ${p.live ?? ""} ${p.repo ?? ""}`.toLowerCase();
   return (
     items.find((p) => p.slug === q) ||
     items.find((p) => p.slug.startsWith(q)) ||
-    items.find((p) => p.name.toLowerCase().includes(q))
+    items.find((p) => hay(p).includes(q))
   );
 }
 

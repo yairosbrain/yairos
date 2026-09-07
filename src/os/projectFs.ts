@@ -44,10 +44,13 @@ export function projectSlug(p: Project): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
   if (fromName.length >= 3) return fromName;
+  // Hebrew name → fall back to the live URL's first label (usually the
+  // friendly project name), then the repo name, then the id tail.
+  const host = p.liveUrl?.replace(/^https?:\/\//, "").split(/[./]/)[0];
+  if (host && host.length >= 3) return host;
   const m = p.repoUrl?.match(/github\.com\/[^/]+\/([^/]+)/);
   if (m) return m[1];
-  const host = p.liveUrl?.replace(/^https?:\/\//, "").split(/[./]/)[0];
-  return host || p.id.slice(-6);
+  return p.id.slice(-6);
 }
 
 export function toShellProjects(projects: Project[]): ShellProject[] {
