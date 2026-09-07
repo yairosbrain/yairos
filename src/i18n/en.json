@@ -206,5 +206,9 @@
   "settings.tokenWrongUser": "This token belongs to {login}, but 'GitHub user' is set to {owner}. Fix one of them or builds will fail.",
   "settings.tokenMissing": "Missing scopes: {scopes}. Create a new token with them.",
   "projects.folderEmpty": "Empty — file projects here with mv in the terminal",
-  "projects.unfiled": "Unfiled"
+  "projects.unfiled": "Unfiled",
+  "globe.map.dark": "Dark",
+  "globe.map.satellite": "Satellite",
+  "globe.map.streets": "Streets",
+  "globe.map.terrain": "Terrain"
 }

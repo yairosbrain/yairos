@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useI18n } from "../i18n";
 
 // A real 3D globe that flattens to street level — MapLibre GL with the globe
-// projection over OpenStreetMap raster tiles. No API key, no billing account,
-// and CORS-open, which is why this and not the Google Maps JS API.
+// projection over free, keyless, CORS-open raster tiles (which is why this and
+// not the Google Maps JS API). Several basemaps, switchable like Google Maps'
+// layer toggle.
 //
 // MapLibre is loaded from a CDN on first open rather than bundled: it is a
 // large dependency that most sessions never touch.
@@ -12,9 +13,83 @@ const MAPLIBRE_JS = "https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js";
 const MAPLIBRE_CSS = "https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css";
 const NOMINATIM = "https://nominatim.openstreetmap.org/search";
 
+interface Basemap {
+  id: string;
+  /** i18n key for the button label */
+  key: string;
+  tiles: string[];
+  maxzoom: number;
+  attribution: string;
+}
+
+// All keyless and CORS-open. `dark` is first so it matches the terminal look.
+const BASEMAPS: Basemap[] = [
+  {
+    id: "dark",
+    key: "globe.map.dark",
+    tiles: [
+      "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+      "https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+      "https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+      "https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+    ],
+    maxzoom: 20,
+    attribution: "© OpenStreetMap contributors © CARTO"
+  },
+  {
+    id: "satellite",
+    key: "globe.map.satellite",
+    tiles: [
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+    ],
+    maxzoom: 19,
+    attribution: "Esri, Maxar, Earthstar Geographics"
+  },
+  {
+    id: "streets",
+    key: "globe.map.streets",
+    tiles: [
+      "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    ],
+    maxzoom: 19,
+    attribution: "© OpenStreetMap contributors"
+  },
+  {
+    id: "terrain",
+    key: "globe.map.terrain",
+    tiles: [
+      "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
+      "https://b.tile.opentopomap.org/{z}/{x}/{y}.png",
+      "https://c.tile.opentopomap.org/{z}/{x}/{y}.png"
+    ],
+    maxzoom: 17,
+    attribution: "© OpenStreetMap contributors, SRTM · © OpenTopoMap (CC-BY-SA)"
+  }
+];
+
+function styleFor(bm: Basemap): Record<string, unknown> {
+  return {
+    version: 8,
+    projection: { type: "globe" },
+    sources: {
+      base: {
+        type: "raster",
+        tiles: bm.tiles,
+        tileSize: 256,
+        maxzoom: bm.maxzoom,
+        attribution: bm.attribution
+      }
+    },
+    layers: [{ id: "base", type: "raster", source: "base" }]
+  };
+}
+
 interface MapLibreMap {
   addControl(c: unknown, pos?: string): void;
   flyTo(o: Record<string, unknown>): void;
+  setStyle(s: Record<string, unknown>, opts?: Record<string, unknown>): void;
   on(ev: string, fn: (e: never) => void): void;
   remove(): void;
 }
@@ -26,9 +101,7 @@ declare global {
       NavigationControl: new (o?: Record<string, unknown>) => unknown;
       ScaleControl: new (o?: Record<string, unknown>) => unknown;
       Marker: new (o?: Record<string, unknown>) => {
-        setLngLat(v: [number, number]): {
-          addTo(m: MapLibreMap): unknown;
-        };
+        setLngLat(v: [number, number]): { addTo(m: MapLibreMap): unknown };
       };
     };
   }
@@ -65,6 +138,7 @@ export default function GlobeScreen() {
   const hostRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [basemap, setBasemap] = useState(BASEMAPS[0].id);
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [note, setNote] = useState("");
@@ -76,29 +150,14 @@ export default function GlobeScreen() {
         if (cancelled || !hostRef.current || !window.maplibregl) return;
         const map = new window.maplibregl.Map({
           container: hostRef.current,
-          style: {
-            version: 8,
-            sources: {
-              osm: {
-                type: "raster",
-                tiles: [
-                  "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                  "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                ],
-                tileSize: 256,
-                maxzoom: 19,
-                attribution: "© OpenStreetMap contributors"
-              }
-            },
-            layers: [{ id: "osm", type: "raster", source: "osm" }]
-          },
+          style: styleFor(BASEMAPS[0]),
           center: [34.85, 31.5],
-          zoom: 1.6,
-          // The globe flattens automatically as you zoom toward street level
-          projection: { type: "globe" }
+          zoom: 1.6
         });
-        map.addControl(new window.maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+        map.addControl(
+          new window.maplibregl.NavigationControl({ visualizePitch: true }),
+          "top-right"
+        );
         map.addControl(new window.maplibregl.ScaleControl({ unit: "metric" }));
         mapRef.current = map;
         setStatus("ready");
@@ -111,6 +170,15 @@ export default function GlobeScreen() {
       mapRef.current = null;
     };
   }, []);
+
+  // Swap the basemap in place — setStyle keeps the camera, and markers are
+  // managed outside the style so they stay put.
+  const switchBasemap = (id: string) => {
+    const bm = BASEMAPS.find((b) => b.id === id);
+    if (!bm || !mapRef.current || id === basemap) return;
+    mapRef.current.setStyle(styleFor(bm));
+    setBasemap(id);
+  };
 
   /**
    * Nominatim often misses "street number city" written in Hebrew, so we widen
@@ -131,9 +199,7 @@ export default function GlobeScreen() {
       );
       if (!res.ok) continue;
       const hits = (await res.json()) as { lat: string; lon: string }[];
-      if (hits.length) {
-        return [parseFloat(hits[0].lon), parseFloat(hits[0].lat)];
-      }
+      if (hits.length) return [parseFloat(hits[0].lon), parseFloat(hits[0].lat)];
     }
     return null;
   };
@@ -213,6 +279,19 @@ export default function GlobeScreen() {
       {note && <div className="globe-note">{note}</div>}
 
       <div className="globe-map" ref={hostRef}>
+        {status === "ready" && (
+          <div className="globe-layers" dir="ltr">
+            {BASEMAPS.map((b) => (
+              <button
+                key={b.id}
+                className={`globe-layer ${basemap === b.id ? "on" : ""}`}
+                onClick={() => switchBasemap(b.id)}
+              >
+                {t(b.key)}
+              </button>
+            ))}
+          </div>
+        )}
         {status === "loading" && (
           <div className="globe-overlay caret">{t("globe.loading")}</div>
         )}

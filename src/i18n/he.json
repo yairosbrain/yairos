@@ -206,5 +206,9 @@
   "settings.tokenWrongUser": "הטוקן שייך ל-{login}, אבל 'משתמש GitHub' מוגדר ל-{owner}. תקן אחד מהם — אחרת הבנייה תיכשל.",
   "settings.tokenMissing": "חסרות הרשאות: {scopes}. צור טוקן חדש עם ההרשאות האלה.",
   "projects.folderEmpty": "התיקייה ריקה — העבר לכאן פרויקטים עם mv בטרמינל",
-  "projects.unfiled": "לא בתיקייה"
+  "projects.unfiled": "לא בתיקייה",
+  "globe.map.dark": "כהה",
+  "globe.map.satellite": "לוויין",
+  "globe.map.streets": "רחובות",
+  "globe.map.terrain": "טופוגרפי"
 }
