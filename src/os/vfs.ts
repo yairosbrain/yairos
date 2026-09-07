@@ -2,6 +2,8 @@
 // It lives in localStorage under this origin, which means it is genuinely
 // isolated from the machine: nothing here can read or write a real file.
 
+import { renderCommandsDoc } from "./commandHelp";
+
 export interface VFile {
   type: "file";
   content: string;
@@ -76,6 +78,19 @@ export function seedTree(): VDir {
       {
         "flag.txt": file(
           "אם אתה קורא את זה — עברת את שער ההרשאות.\nזכור: זה שער של האפליקציה, לא של מערכת ההפעלה.\n",
+          { root: true }
+        ),
+        // The full command reference — only here, only for root.
+        "commands.md": file(renderCommandsDoc(), { root: true }),
+        "README": file(
+          [
+            "/root — your workspace.",
+            "",
+            "  cat commands.md      every command, grouped, one line each",
+            "  ask <what you want>  describe a task, get the command back",
+            "  ls /projects         your built sites (mkdir/mv to file them)",
+            ""
+          ].join("\n"),
           { root: true }
         )
       },

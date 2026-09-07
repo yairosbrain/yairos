@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useWm } from "../os/WindowManager";
 import { useData } from "../data/store";
-import { execute, hasCustomPass, newEnv, type ShellEnv, type ShellHost } from "../os/shell";
+import {
+  applyCompletion,
+  execute,
+  hasCustomPass,
+  newEnv,
+  type ShellEnv,
+  type ShellHost
+} from "../os/shell";
 import {
   addFolder,
   loadFolders,
@@ -10,6 +17,19 @@ import {
 } from "../os/projectFs";
 import { loadVfs } from "../os/vfs";
 import { appByCommand } from "../os/apps";
+import { askBrain } from "../brain";
+
+const HIST_KEY = "yairos.shellhistory";
+const HIST_MAX = 500;
+
+function loadHistory(): string[] {
+  try {
+    const a = JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
+    return Array.isArray(a) ? a.filter((s) => typeof s === "string") : [];
+  } catch {
+    return [];
+  }
+}
 
 // The interactive shell. Its own prompt, its own history, its own filesystem —
 // separate from the chat bar at the bottom, which talks to the brain.
@@ -37,7 +57,8 @@ export default function ShellScreen() {
     BANNER.map((t) => ({ id: lineId++, text: t, kind: "out" as const }))
   );
   const [input, setInput] = useState("");
-  const [history, setHistory] = useState<string[]>([]);
+  // History persists across sessions, like ~/.bash_history
+  const [history, setHistory] = useState<string[]>(loadHistory);
   const historyRef = useRef<string[]>([]);
   historyRef.current = history;
   const histIdx = useRef<number | null>(null);
@@ -66,6 +87,7 @@ export default function ShellScreen() {
   const host: ShellHost = {
     out,
     history: () => historyRef.current,
+    ask: (question) => askBrain([{ role: "user", content: question }]),
     wm: {
       open: (app) => {
         const def = appByCommand(app);
@@ -118,8 +140,18 @@ export default function ShellScreen() {
       { id: lineId++, text: prompt + echo, kind: "in" as const }
     ]);
 
-    if (!env.pending && raw.trim()) {
-      setHistory((h) => [...h.slice(-99), raw]);
+    // Record real commands to persistent history (skip masked input and
+    // an immediate repeat, the way bash's HISTCONTROL=ignoredups does)
+    if (!env.pending && raw.trim() && historyRef.current[historyRef.current.length - 1] !== raw) {
+      setHistory((h) => {
+        const next = [...h, raw].slice(-HIST_MAX);
+        try {
+          localStorage.setItem(HIST_KEY, JSON.stringify(next));
+        } catch {
+          /* quota — history stays in memory this session */
+        }
+        return next;
+      });
     }
     if (!env.pending && raw.trim() === "clear") {
       setLines([]);
@@ -150,6 +182,24 @@ export default function ShellScreen() {
   const env = envRef.current;
   const masked = !!env.pending?.masked;
   const shippedPass = !hasCustomPass();
+
+  const promptStr = () =>
+    `${env.root ? "root" : "yair"}@yairos:${env.cwd}${env.root ? "#" : "$"} `;
+
+  const onTab = () => {
+    if (masked) return;
+    const { line, list } = applyCompletion(input, env, host);
+    if (line !== undefined) {
+      setInput(line);
+    } else if (list) {
+      // Bash prints the options and keeps your input
+      setLines((prev) => [
+        ...prev.slice(-400),
+        { id: lineId++, text: promptStr() + input, kind: "in" as const },
+        { id: lineId++, text: list.join("  "), kind: "out" as const }
+      ]);
+    }
+  };
 
   return (
     <div
@@ -192,6 +242,14 @@ export default function ShellScreen() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") return void submit();
+            if (e.key === "Tab") {
+              e.preventDefault();
+              return onTab();
+            }
+            if ((e.key === "l" || e.key === "L") && e.ctrlKey) {
+              e.preventDefault();
+              return setLines([]);
+            }
             if (e.key === "ArrowUp" && !masked) {
               e.preventDefault();
               return recall(-1);

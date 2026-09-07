@@ -26,6 +26,7 @@ import {
   verifyPassphrase,
   type StoredPassphrase
 } from "./crypto";
+import { commandListForPrompt, matchCommands } from "./commandHelp";
 
 // A POSIX-flavoured shell over the virtual filesystem: word splitting with
 // quotes, $VAR expansion, aliases, pipes, and output redirection — so what is
@@ -89,6 +90,8 @@ export interface ShellProject {
 export interface ShellHost {
   out(...lines: string[]): void;
   history(): string[];
+  /** Ask the brain a question (used by `ask`). Rejects if no brain configured. */
+  ask(question: string): Promise<string>;
   wm: {
     open(app: string): void;
     close(app: string): boolean;
@@ -439,8 +442,76 @@ const BUILTINS = new Set([
   "passwd", "hash", "encrypt", "decrypt", "uname", "hostname", "date", "cal",
   "env", "export", "unset", "alias", "unalias", "history", "which", "type",
   "sleep", "clear", "df", "free", "uptime", "reset-fs", "startx", "dash",
-  "tile", "open", "close", "ps", "kill", "apps", "man", "help"
+  "tile", "open", "close", "ps", "kill", "apps", "man", "help", "ask"
 ]);
+
+/* ---------------- Tab completion ---------------- */
+
+export interface Completion {
+  /** char index in the line where the completed token starts */
+  from: number;
+  /** all matches for the token */
+  candidates: string[];
+}
+
+function longestCommonPrefix(list: string[]): string {
+  if (!list.length) return "";
+  let p = list[0];
+  for (const s of list) {
+    while (!s.startsWith(p)) p = p.slice(0, -1);
+  }
+  return p;
+}
+
+/**
+ * Complete the token under the cursor: command names + aliases at the start of
+ * a command, filesystem paths otherwise. Returns the token position and every
+ * match; the caller decides whether to insert or list them.
+ */
+export function complete(line: string, env: ShellEnv, host: ShellHost): Completion {
+  mountProjects(env, host);
+  const token = /(\S*)$/.exec(line)?.[1] ?? "";
+  const from = line.length - token.length;
+  const before = line.slice(0, from);
+  const firstWord = before.trim() === "" || /[|;]\s*$/.test(before);
+
+  let candidates: string[] = [];
+  if (firstWord && !token.includes("/")) {
+    candidates = [...BUILTINS, ...Object.keys(env.aliases)]
+      .filter((n) => n.startsWith(token))
+      .sort();
+  } else {
+    const slash = token.lastIndexOf("/");
+    const dirPart = slash >= 0 ? token.slice(0, slash + 1) : "";
+    const basePart = slash >= 0 ? token.slice(slash + 1) : token;
+    const node = getNode(env.tree, resolvePath(env.cwd, dirPart || "."));
+    if (isDir(node)) {
+      candidates = Object.keys(node.children)
+        .filter((n) => env.root || !node.children[n].root)
+        .filter((n) => n.startsWith(basePart))
+        .sort()
+        .map((n) => dirPart + n + (node.children[n].type === "dir" ? "/" : ""));
+    }
+  }
+  return { from, candidates };
+}
+
+/** What to actually do with a Tab press: replace the token, or list options */
+export function applyCompletion(
+  line: string,
+  env: ShellEnv,
+  host: ShellHost
+): { line?: string; list?: string[] } {
+  const { from, candidates } = complete(line, env, host);
+  if (!candidates.length) return {};
+  if (candidates.length === 1) {
+    return { line: line.slice(0, from) + candidates[0] + (candidates[0].endsWith("/") ? "" : " ") };
+  }
+  const lcp = longestCommonPrefix(candidates);
+  const token = line.slice(from);
+  if (lcp.length > token.length) return { line: line.slice(0, from) + lcp };
+  return { list: candidates };
+}
 
 const MANUALS: Record<string, string[]> = {
   bash: [
@@ -1050,6 +1121,38 @@ async function runStage(
         stdout: host.wm.apps().map((a) => `  ${a.command.padEnd(10)}${a.ready ? "" : "(pending)"}`).join("\n")
       };
 
+    case "ask": {
+      if (!env.root) return rootOnly();
+      const want = args.join(" ").trim();
+      if (!want) {
+        host.out("usage: ask <what you want the command to do>");
+        host.out("  e.g.  ask seal a note so nobody can read it");
+        return { stdout: "", halt: true };
+      }
+      host.out("· asking…");
+      try {
+        const reply = await host.ask(
+          "You are a command assistant for \"ybash\", a small in-browser shell. " +
+            "The user describes a task; reply with ONLY the exact ybash command " +
+            "line(s) that do it (at most 3 lines), then one short line of " +
+            "explanation. No prose before, no markdown fences. If nothing fits, " +
+            "say so in one line.\n\nCommands:\n" +
+            commandListForPrompt() +
+            `\n\nTask: ${want}`
+        );
+        host.out(...reply.split("\n").map((l) => "  " + l));
+      } catch {
+        const hits = matchCommands(want);
+        if (hits.length) {
+          host.out("brain unavailable — closest commands:");
+          host.out(...hits.map((h) => `  ${h.usage.padEnd(30)} ${h.desc}`));
+        } else {
+          host.out("brain unavailable, and nothing local matched. try: cat /root/commands.md");
+        }
+      }
+      return { stdout: "", halt: true };
+    }
+
     /* ---- docs ---- */
     case "man": {
       const topic = rest[0];
@@ -1069,10 +1172,11 @@ async function runStage(
           "shell        alias  unalias  export  unset  env  history  which  type",
           "system       uname [-a]  hostname  date  cal  df  free  uptime  sleep  reset-fs",
           "windows      startx  dash  tile  open [project <n>]  close  ps  kill  apps",
-          "docs         man bash | man root | man crypto | man projects",
+          "docs         man bash|root|crypto|projects   ask <task> (root)",
           "",
+          "TAB completes commands & paths · ↑↓ history · Ctrl+L clears",
           "redirection  >  >>        pipe  |        vars  $NAME",
-          "lessons      ls /usr/share/lessons          projects  ls /projects (root)"
+          "lessons      ls /usr/share/lessons     full ref  cat /root/commands.md (root)"
         ].join("\n")
       };
 
