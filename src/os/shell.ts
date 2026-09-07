@@ -468,12 +468,18 @@ function longestCommonPrefix(list: string[]): string {
  * a command, filesystem paths otherwise. Returns the token position and every
  * match; the caller decides whether to insert or list them.
  */
+/** Commands whose arguments are always directories */
+const DIR_ONLY = new Set(["cd", "tree", "rmdir"]);
+
 export function complete(line: string, env: ShellEnv, host: ShellHost): Completion {
   mountProjects(env, host);
   const token = /(\S*)$/.exec(line)?.[1] ?? "";
   const from = line.length - token.length;
   const before = line.slice(0, from);
   const firstWord = before.trim() === "" || /[|;]\s*$/.test(before);
+
+  // the command this token is an argument to (after the last pipe)
+  const cmdWord = before.split(/[|;]/).pop()!.trim().split(/\s+/)[0] ?? "";
 
   let candidates: string[] = [];
   if (firstWord && !token.includes("/")) {
@@ -486,8 +492,10 @@ export function complete(line: string, env: ShellEnv, host: ShellHost): Completi
     const basePart = slash >= 0 ? token.slice(slash + 1) : token;
     const node = getNode(env.tree, resolvePath(env.cwd, dirPart || "."));
     if (isDir(node)) {
+      const dirsOnly = DIR_ONLY.has(cmdWord);
       candidates = Object.keys(node.children)
         .filter((n) => env.root || !node.children[n].root)
+        .filter((n) => !dirsOnly || node.children[n].type === "dir")
         .filter((n) => n.startsWith(basePart))
         .sort()
         .map((n) => dirPart + n + (node.children[n].type === "dir" ? "/" : ""));
