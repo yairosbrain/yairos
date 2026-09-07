@@ -15,11 +15,15 @@ const PREAMBLE = [
 
 export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
   const [pass, setPass] = useState("");
+  const [show, setShow] = useState(false);
   const [msg, setMsg] = useState("");
   const [checking, setChecking] = useState(false);
   const [lockedUntil, setLockedUntil] = useState(0);
   const [attempts, setAttempts] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // A Hebrew keyboard turns "Ya6873544!" into gibberish under the dots
+  const hebrew = /[֐-׿]/.test(pass);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -39,7 +43,9 @@ export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
     if (checking || waitLeft > 0 || !pass) return;
     setChecking(true);
     setMsg("");
-    const ok = await checkMasterPass(pass);
+    // Leading/trailing whitespace is never part of the passphrase; mobile
+    // keyboards love to append a space.
+    const ok = await checkMasterPass(pass.trim());
     setChecking(false);
     setPass("");
     if (ok) {
@@ -73,7 +79,7 @@ export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
           <input
             ref={inputRef}
             className="lock-input"
-            type="password"
+            type={show ? "text" : "password"}
             name="yairos-master"
             value={pass}
             // Suppress the browser password manager — this must be typed
@@ -89,9 +95,25 @@ export default function LockScreen({ onUnlock }: { onUnlock: () => void }) {
               if (e.key === "Enter") void submit();
             }}
           />
-          {!checking && waitLeft === 0 && <span className="lock-caret" />}
+          <button
+            type="button"
+            className="lock-show"
+            onClick={() => {
+              setShow((s) => !s);
+              inputRef.current?.focus();
+            }}
+            tabIndex={-1}
+          >
+            [{show ? "hide" : "show"}]
+          </button>
+          {!checking && waitLeft === 0 && !show && <span className="lock-caret" />}
         </div>
 
+        {hebrew && (
+          <div className="lock-msg bad">
+            keyboard is in Hebrew — switch to English (Alt+Shift) and retype
+          </div>
+        )}
         {checking && <div className="lock-msg dim">verifying…</div>}
         {waitLeft > 0 && (
           <div className="lock-msg bad">
