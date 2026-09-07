@@ -14,3 +14,6 @@ convex/_generated
 
 # Handoff plaintext — decrypt locally with scripts/vault.mjs, never commit
 YAIROS-HANDOFF.md
+
+# Android signing key — back this up OUTSIDE the repo. Never commit.
+_keystore/

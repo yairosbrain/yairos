@@ -1,12 +1,8 @@
-[
-  {
-    "relation": ["delegate_permission/common.handle_all_urls"],
-    "target": {
-      "namespace": "android_app",
-      "package_name": "app.vercel.yairos.twa",
-      "sha256_cert_fingerprints": [
-        "REPLACE_WITH_APK_SIGNING_CERT_SHA256"
-      ]
-    }
-  }
-]
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "app.vercel.yairos.twa",
+        "sha256_cert_fingerprints": ["10:D2:42:11:14:19:36:D6:B5:6E:23:4B:37:4B:4D:CB:72:4D:23:2F:7D:9D:BD:5B:5F:90:E8:19:F5:1A:85:58"]
+      }
+    }]
