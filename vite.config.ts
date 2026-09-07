@@ -39,7 +39,7 @@ export default defineConfig({
         // Let these reach the network: the APK download, the install page,
         // and the Android domain-verification file
         navigateFallbackDenylist: [
-          /^\/yairos\.apk$/,
+          /^\/yairos\.(apk|msix|appinstaller)$/,
           /^\/get(\.html)?$/,
           /^\/app$/,
           /^\/\.well-known\//
