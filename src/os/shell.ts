@@ -471,6 +471,28 @@ function longestCommonPrefix(list: string[]): string {
 /** Commands whose arguments are always directories */
 const DIR_ONLY = new Set(["cd", "tree", "rmdir"]);
 
+/**
+ * Word lists for commands whose arguments are not filesystem paths — man
+ * topics, app names, alias names, and so on. Returning a list here replaces
+ * path completion entirely for that command.
+ */
+const ARG_WORDS: Record<
+  string,
+  (env: ShellEnv, host: ShellHost, priorArgs: string[]) => string[]
+> = {
+  man: () => Object.keys(MANUALS),
+  which: () => [...BUILTINS],
+  type: () => [...BUILTINS],
+  unalias: (env) => Object.keys(env.aliases),
+  close: (_e, host) => host.wm.list().map((w) => w.app),
+  kill: (_e, host) => host.wm.list().map((w) => w.app),
+  open: (_e, host, prior) =>
+    prior[0] === "project"
+      ? host.projects.list().map((p) => p.slug)
+      : ["project", ...host.wm.apps().map((a) => a.command)],
+  chown: () => ["root", "yair"]
+};
+
 export function complete(line: string, env: ShellEnv, host: ShellHost): Completion {
   mountProjects(env, host);
   const token = /(\S*)$/.exec(line)?.[1] ?? "";
@@ -478,12 +500,18 @@ export function complete(line: string, env: ShellEnv, host: ShellHost): Completi
   const before = line.slice(0, from);
   const firstWord = before.trim() === "" || /[|;]\s*$/.test(before);
 
-  // the command this token is an argument to (after the last pipe)
-  const cmdWord = before.split(/[|;]/).pop()!.trim().split(/\s+/)[0] ?? "";
+  // the command (and the args already typed) this token belongs to
+  const seg = before.split(/[|;]/).pop()!.trim().split(/\s+/).filter(Boolean);
+  const cmdWord = seg[0] ?? "";
+  const priorArgs = seg.slice(1);
 
   let candidates: string[] = [];
   if (firstWord && !token.includes("/")) {
     candidates = [...BUILTINS, ...Object.keys(env.aliases)]
+      .filter((n) => n.startsWith(token))
+      .sort();
+  } else if (ARG_WORDS[cmdWord] && !token.includes("/")) {
+    candidates = ARG_WORDS[cmdWord](env, host, priorArgs)
       .filter((n) => n.startsWith(token))
       .sort();
   } else {
